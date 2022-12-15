@@ -1,5 +1,7 @@
 /go.mod
 *.csv
+*.config
+tools
 .vscode
 workers
 orquestrator
