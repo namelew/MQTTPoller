@@ -1,0 +1,6 @@
+/go.mod
+*.csv
+.vscode
+workers
+orquestrator
+*.log
