@@ -1,12 +1,7 @@
 package main
 
-import (
-	"encoding/json"
-)
-
 type commandExperiment struct {
-	Expid				 int64 `json:"expid"`
-	Attempts			 int	`json:"attempts"`
+	Expid                int64 `json:"expid"`
 	Tool                 string `json:"tool"`
 	Broker               string `json:"broker"`
 	Port                 int `json:"broker_port"`
@@ -66,17 +61,15 @@ type experimentResult struct {
 	Subscribe subscriberExperimentResult `json:"subscribe"`
 }
 
-type infoTerminal struct{
-	Id []int
+// type tool struct {
+// 	Name    string
+// 	Version string
+// }
+
+type info struct {
 	MemoryDisplay bool
 	CpuDisplay    bool
 	DiscDisplay   bool
-}
-
-type start struct{
-	Id []int
-	JsonArg string
-	ExeMode string
 }
 
 type infoDisplay struct{
@@ -87,7 +80,7 @@ type infoDisplay struct{
 
 type command struct{
 	Name string `json:"name"`
-	CommandType string `json:"commandType"`
+	Type string `json:"type"`
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
@@ -97,38 +90,14 @@ type file struct{
 	Extension string `json:"extension"`
 }
 
-type worker struct{
-	Id string
-	Status bool
-	ReceiveConfirmation bool 
-	TestPing bool
-	historic experimentHistory
+type status struct{
+	Type string `json:"type"`
+	Status string `json:"status"`
+	Attr command `json:"attr"`
 }
 
-func (cmd *command) ToCommandExperiment() *commandExperiment{
-	var cExp commandExperiment
-
-	data,err := json.Marshal(cmd.Arguments)
-
-	if err != nil {
-		return nil
-	}
-
-	err = json.Unmarshal(data, &cExp)
-
-	if err != nil {
-		return nil
-	}
-
-	return &cExp
-}
-
-func (cmdExp *commandExperiment) Attach(cmd *command){
-	data,err := json.Marshal(cmdExp)
-
-	if err != nil{
-		return
-	}
-
-	json.Unmarshal(data, &cmd.Arguments)
+type session struct{
+	Id int
+	Finish bool
+	Status status
 }

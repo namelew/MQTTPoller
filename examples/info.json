@@ -1,9 +1,0 @@
-{
-    "name": "info",
-    "commandType": "command moderation",
-    "arguments": {
-        "memoryDisplay": true,
-        "cpuDisplay": true,
-        "discDisplay": true
-    }
-}

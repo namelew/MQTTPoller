@@ -1,6 +1,7 @@
+*.conf
+worker
 /go.mod
-*.csv
 .vscode
-workers
-orquestrator
-*.log
+vendor
+worker.log
+*.bin

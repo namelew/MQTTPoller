@@ -1,21 +1,30 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+	"flag"
+	"sync"
+
+	"math/rand"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/cpu"
 )
 
-var workers = make([]worker,1, 10)
+var logMutex sync.Mutex
+var experimentListMutex sync.Mutex
+var experimentList ongoingExperiments
 
 func fileExists(file string) bool{
 	_, err := os.Stat(file)
@@ -27,545 +36,401 @@ func fileExists(file string) bool{
 	return true
 }
 
-func absInt(x int) int{
-	if x < 0{
-		return (x * -1)
-	}
-	return x
-}
-
-func getJsonFromFile(file string, expid int64) (string, int, command, int){
+func getJsonFromFile(file string) string{
 	if !fileExists(file){
-		return "",0,command{},0
+		return ""
 	}
 
-	var exec_time int
-	var attemps int
 	data,_ := os.ReadFile(file)
 
-	var temp command
-	var jsonArg commandExperiment
-
-	json.Unmarshal(data, &temp)
-
-	data,_ = json.Marshal(temp.Arguments)
-
-	json.Unmarshal(data, &jsonArg)
-
-	jsonArg.Expid = expid
-	exec_time = jsonArg.Exec_time
-	attemps = jsonArg.Attempts
-
-	data,_ = json.Marshal(jsonArg)
-
-	json.Unmarshal(data, &temp.Arguments)
-
-	data,_ = json.Marshal(temp)
-
-	return string(data), exec_time, temp, attemps
+	return string(data)
 }
 
-func setMessageHandler(client mqtt.Client, id int){
-	token := client.Subscribe(workers[id].Id + "/Experiments/Results", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		messageHandlerExperiment(m, id)
-	})
-	token.Wait()
-	token = client.Subscribe(workers[id].Id + "/Experiments/Status", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		messageHandlerExperimentStatus(client, m, id)
-	})
-	token.Wait()
+func loadArguments(file string, arg map[string]interface{}) (bool, int64){
+	var arguments commandExperiment
+	jsonObj,_ := json.Marshal(arg)
+	json.Unmarshal(jsonObj, &arguments)
+
+	f, _ := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    defer f.Close()
+
+	var argf string = ""
+
+	isNull := func (param string) string{if param == ""{ return "#"}; return ""}
+
+	argf += fmt.Sprintf("broker=%s\n", arguments.Broker)
+	argf += fmt.Sprintf("broker_port=%d\n", arguments.Port)
+	argf += fmt.Sprintf("mqtt_version=%d\n", arguments.MqttVersion)
+	argf += fmt.Sprintf("num_publishers=%d\n", arguments.NumPublishers)
+	argf += fmt.Sprintf("num_subscribers=%d\n", arguments.NumSubscriber)
+	argf += fmt.Sprintf("qos_publisher=%d\n", arguments.QosPublisher)
+	argf += fmt.Sprintf("qos_subscriber=%d\n", arguments.QosSubscriber)
+	argf += fmt.Sprintf("shared_subscription=%t\n", arguments.SharedSubscrition)
+	argf += fmt.Sprintf("retain=%t\n", arguments.Retain)
+	argf += fmt.Sprintf("topic=%s\n", arguments.Topic)
+	argf += fmt.Sprintf("payload=%d\n", arguments.Payload)
+	argf += fmt.Sprintf("num_messages=%d\n", arguments.NumMessages)
+	argf += fmt.Sprintf("ramp_up=%d\n", arguments.RampUp)
+	argf += fmt.Sprintf("ramp_down=%d\n", arguments.RampDown)
+	argf += fmt.Sprintf("interval=%d\n", arguments.Interval)
+	argf += fmt.Sprintf("subscriber_timeout=%d\n", arguments.SubscriberTimeout)
+	argf += fmt.Sprintf("log_level=%s\n", arguments.LogLevel)
+	argf += fmt.Sprintf("%sntp=%s\n", isNull(arguments.Ntp),arguments.Ntp)
+	if arguments.Output {argf += fmt.Sprintf("output=%s\n", "output")}
+	argf += fmt.Sprintf("%suser_name=%s\n", isNull(arguments.User),arguments.User)
+	argf += fmt.Sprintf("%spassword=%s\n", isNull(arguments.Password),arguments.Password)
+	argf += fmt.Sprintf("%stls_truststore=%s\n", isNull(arguments.TlsTrustsore), arguments.TlsTrustsore)
+	argf += fmt.Sprintf("%stls_truststore_pass=%s\n", isNull(arguments.TlsTruststorePassword), arguments.TlsTruststorePassword)
+	argf += fmt.Sprintf("%stls_keystore=%s\n", isNull(arguments.TlsKeystore),arguments.TlsKeystore)
+	argf += fmt.Sprintf("%stls_keystore_pass=%s\n", isNull(arguments.TlsKeystorePassword),arguments.TlsKeystorePassword)
+
+    // Write bytes to file
+    byteSlice := []byte(argf)
+    _, err := f.Write(byteSlice)
+    if err != nil {
+		logMutex.Lock()
+		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f.WriteString("crash "+err.Error()+"\n")
+		logMutex.Unlock()
+		f.Close()
+    }
+
+	return arguments.Output,arguments.Expid
 }
 
-func messageHandlerExperimentStatus(client mqtt.Client, msg mqtt.Message, id int){
-	var exps status
-	json.Unmarshal(msg.Payload(), &exps)
+func extracExperimentResults(output string, createLog bool) experimentResult{
+	results:= experimentResult{}
+	results.Meta.Literal = output
 
-	tokens := strings.Split(exps.Type, " ")
-	expid,_ := strconv.Atoi(tokens[2])
+	temp := [12]string{}
 
-	exp := workers[id].historic.search(int64(expid))
+	i := 0
+
+	for _,s := range strings.Split(output, "\n"){
+		if s != "" && s[0] != '-'{
+			temp[i] = strings.Split(s, ": ")[1]
+			i++
+		}
+	}
+	results.Meta.ToolName = "mqttLoader"
+	results.Meta.ExperimentError = ""
 	
-	switch exps.Status{
-		case "start":
-			return
-		case "finish":
-			if exp != nil{
-				exp.finished = true
+	results.Publish.Throughput,_ = strconv.ParseFloat(strings.Replace(temp[2], ",",".", 1), 64) 
+	results.Publish.AvgThroughput,_ = strconv.ParseFloat(strings.Replace(temp[3], ",",".", 1), 64)
+	results.Publish.PubMessages,_ = strconv.Atoi(temp[4])
+
+	for _,s := range strings.Split(temp[5], ", "){
+		aux,_ := strconv.Atoi(s)
+		results.Publish.PerSecondThrouput = append(results.Publish.PerSecondThrouput, aux) 
+	}
+
+	results.Subscribe.Throughput,_ = strconv.ParseFloat(strings.Replace(temp[6], ",",".", 1), 64)
+	results.Subscribe.AvgThroughput,_ = strconv.ParseFloat(strings.Replace(temp[7], ",",".", 1), 64)
+	results.Subscribe.ReceivedMessages,_ = strconv.Atoi(temp[8])
+
+	for _,s := range strings.Split(temp[9], ", "){
+		aux,_ := strconv.Atoi(s)
+		results.Subscribe.PerSecondThrouput = append(results.Subscribe.PerSecondThrouput, aux) 
+	}
+
+	results.Subscribe.Latency,_ = strconv.ParseFloat(strings.Replace(temp[10], ",",".", 1), 64)
+	results.Subscribe.AvgLatency,_ = strconv.ParseFloat(strings.Replace(temp[11], ",",".", 1), 64)
+
+	if createLog {
+		var files []string
+
+		err := filepath.Walk("output", func(path string, info os.FileInfo, err error) error {
+			if err != nil{
+				logMutex.Lock()
+				f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				f.WriteString("extract failure "+err.Error()+"\n")
+				f.Close()
+				logMutex.Unlock()
+				return nil
 			}
-		default:
-			if exp != nil{
-				exp.finished = true
-				exp.err = true
-				redoExperiment(client, id, exp)
+
+			if !info.IsDir(){
+				files = append(files, path)
 			}
+
+			return nil
+		})
+
+		if err != nil{
+			results.Meta.ExperimentError = "Error X: Failed in upload log file"
+		}
+
+		for _,f := range files{
+			aux := strings.Split(f, "/")
+			name := aux[len(aux) - 1]
+			if name[0:10] == "mqttloader"{
+				buffer,_ := ioutil.ReadFile(f)
+				results.Meta.LogFile.Data = buffer
+				results.Meta.LogFile.Name = name
+				results.Meta.LogFile.Extension = strings.Split(name, ".")[1]
+				os.Remove(f)
+			}
+		}
+	}
+
+	return results
+}
+
+func workerKeepAlive(client mqtt.Client, msg string){
+	for {
+		Ping(client, msg)
+		time.Sleep(time.Second)
 	}
 }
 
-func isIn(workers []worker, clientID string) bool{
-	for _,w := range workers{
-		if clientID == w.Id{
-			return true
-		}
-	}
-	return false
+func Ping(client mqtt.Client, m string){
+	t := client.Publish("Orquestrator/Ping", byte(1), false, m)
+	t.Wait()
 }
 
-func receiveControl(client mqtt.Client,id int, timeout int){
-	var start int64 = time.Now().UnixMilli()
-	log := workers[id].historic.root.findLarger()
+func Start(client mqtt.Client, clientID string, tool string, cmdExp command, commandLiteral string, experimentId int64){
+	var arg_file string = `"myconfig.conf"`
+	var flag string = "-c"
+	var createLogFile bool = false
+	var id int64
 
-	for absInt(int(time.Now().UnixMilli() - start)) < (timeout * 1000){
-		if workers[id].ReceiveConfirmation || !workers[id].Status || log.err{
-			break
-		}
+	if(!fileExists("myconfig.conf")){
+		file,_ := os.Create("myconfig.conf")
+		file.Close()
 	}
+	os.Truncate("myconfig.conf", 0)
 
-	workers[id].ReceiveConfirmation = false
-
-	if (timeout * 1000) <= absInt(int(time.Now().UnixMilli() - start)) || !workers[id].Status || log.err{
-		fmt.Printf("\nError in worker %d: experiment don't return\n", id)
-		log.finished = true
-		redoExperiment(client, id, log)
-	}
-}
-
-func watcher(client mqtt.Client, id int, tl int){
-	var start int64 = time.Now().UnixMilli()
-
-	for absInt(int(time.Now().UnixMilli() - start)) < (tl * 1000){
-		if workers[id].TestPing{
-			return
-		}
-	}
-	workers[id].Status = false
-	workers[id].TestPing = true
-
-	token := client.Unsubscribe(workers[id].Id + "/Experiments/Results")
-	token.Wait()
-
-	fmt.Printf("\nWorker %d is off\n", id)
-	fmt.Print(">> ")
-}
-
-func Parser(tokens []string, client mqtt.Client, session *session) interface{}{
-	if tokens[0] == "start"{
-		arg := start{[]int{-1}, "../examples/command.json", "S"}
-
-		if len(tokens) > 1{
-			for i := 0; i < len(tokens); i++{
-				if tokens[i] == "-i"{
-					if strings.Contains(tokens[i+1], "-"){
-						temp := strings.Split(tokens[i+1], "-")
-						start,_ := strconv.Atoi(temp[0])
-						end,_ := strconv.Atoi(temp[1])
-						
-						arg.Id[0] = start
-
-						for j := start + 1; j <= end; j++{
-							arg.Id = append(arg.Id, j)
-						}
-					}else if strings.Contains(tokens[i+1], ","){
-						temp := strings.Split(tokens[i+1], ",")
-
-						arg.Id[0],_ = strconv.Atoi(temp[0])
-
-						for j := 1; j < len(temp); j++{
-							id,_:= strconv.Atoi(temp[j])
-							arg.Id = append(arg.Id, id)
-						}
-					}else{
-						id,_:= strconv.Atoi(tokens[i+1])
-						arg.Id[0] = id
-					}
-				}
-				if tokens[i] == "-f"{
-					arg.JsonArg = tokens[i+1]
-				}
-				if tokens[i] == "-m"{
-					arg.ExeMode = tokens[i+1]
-				}
-			}
-		}
-		return arg
-	}
-
-	if tokens[0] == "info"{
-		arg := infoTerminal{[]int{-1}, false, false, false}
-		if len(tokens) == 1{
-			arg = infoTerminal{[]int{-1},true, true, true}	
-		} else{	
-			for i := 0; i < len(tokens); i++{
-				if tokens[i] == "-i"{
-					if strings.Contains(tokens[i+1], "-"){
-						temp := strings.Split(tokens[i+1], "-")
-						start,_ := strconv.Atoi(temp[0])
-						end,_ := strconv.Atoi(temp[1])
-						
-						arg.Id[0] = start
-
-						for j := start + 1; j <= end; j++{
-							arg.Id = append(arg.Id, j)
-						}
-					}else if strings.Contains(tokens[i+1], ","){
-						temp := strings.Split(tokens[i+1], ",")
-
-						arg.Id[0],_ = strconv.Atoi(temp[0])
-
-						for j := 1; j < len(temp); j++{
-							id,_:= strconv.Atoi(temp[j])
-							arg.Id = append(arg.Id, id)
-						}
-					}else{
-						id,_:= strconv.Atoi(tokens[i+1])
-						arg.Id[0] = id
-					}
-				}
-				if tokens[i] == "-m"{
-					arg.MemoryDisplay = true
-				}
-				if tokens[i] == "-c"{
-					arg.CpuDisplay = true
-				}
-
-				if tokens[i] == "-d"{
-					arg.DiscDisplay = true
-				}
-			}
-		}
-		return arg
-	}
-
-	if tokens[0] == "ls"{
-		str := ""
-		
-		if len(workers) == 0{
-			return ""
-		}
-		if len(tokens) > 1 {
-			if tokens[1] == "-i"{
-				selected,_ := strconv.Atoi(tokens[2])
-				workers[selected].historic.Print()
-				return client
-			}
-		} else{
-			for i:=0; i < len(workers); i++{
-				str += fmt.Sprintf("ID: %d\nNet-ID: %s\nStatus:%t\n", i, workers[i].Id, workers[i].Status)
-			}
-		}
-		
-		return str
-	}
-
-	if tokens[0] == "begin"{
-		session.Finish = false
-		session.Id = time.Now().Nanosecond()
-		session.Status = status{"session status", fmt.Sprintf("start session %d", session.Id), command{}}
-		statusSession,_ := json.Marshal(session)
-		t := client.Publish("Orquestrator/Sessions", byte(1), true, statusSession)
-		t.Wait()
-
-		return client
-	}
-
-	if tokens[0] == "finish"{
-		session.Finish = true
-		session.Status = status{"session status", fmt.Sprintf("finish session %d", session.Id), command{}}
-		statusSession,_ := json.Marshal(session)
-		t := client.Publish("Orquestrator/Sessions", byte(1), true, statusSession)
-		t.Wait()
-
-		return client
-	}
-
-	if tokens[0] == "cancel"{
-		selected,_ := strconv.Atoi(tokens[1])
-		exp,_ := strconv.Atoi(tokens[2])
-
-		cancelExperiment(client, selected, int64(exp))
-
-		return client
-	}
-
-	return nil
-}
-
-func messageHandlerExperiment(m mqtt.Message, id int){
-	var output experimentResult
-
-	worker := workers[id].historic.root.findLarger()
-
-	if worker != nil{
-		worker.finished = true
-	}
-
-	workers[id].ReceiveConfirmation = true
-	
-	json.Unmarshal(m.Payload(), &output)
-
-	if output.Meta.LogFile.Name != ""{
-		ioutil.WriteFile(workers[id].Id+output.Meta.LogFile.Name, output.Meta.LogFile.Data, 0644)
-	}
-
-	fmt.Printf("\nID: %d\n", id)
-	fmt.Println(output.Meta.Literal)
-	fmt.Println("--------------------")
-	fmt.Print(">> ")
-}
-
-func messageHandlerInfos(m mqtt.Message, id int){
-	var output infoDisplay
-
-	json.Unmarshal(m.Payload(), &output)
-	workers[id].ReceiveConfirmation = true
-
-	fmt.Printf("ID: %d\n", id)
-	fmt.Printf("CPU: %s\n", output.Cpu)
-	fmt.Printf("RAM: %d\n", output.Ram)
-	fmt.Printf("Storage: %d\n", output.Disk)
-
-	fmt.Println("--------------------")
-}
-
-func startExperiment(client mqtt.Client, session *session, arg start){
-	expid := time.Now().Unix()
-	msg, exec_t, cmd, attemps := getJsonFromFile(arg.JsonArg, expid)
-	
-
-	if arg.Id[0] == -1{
-		for i := 0; i < len(workers);i++{
-			if !workers[i].Status{
-				fmt.Printf("Worker %d is off, skipping\n", i)
-				fmt.Println("--------------------")
-				continue
-			}
-
-			workers[i].historic.Add(expid, cmd, attemps)
-	
-			token := client.Publish(workers[i].Id + "/Command", byte(1), false, msg)
-			token.Wait()
-
-			go receiveControl(client, i, exec_t * 5)
-
-			fmt.Printf("Requesting experiment in worker %d\n", i)
-		}
-	}else{
-		argTam := len(arg.Id)
-		for i := 0; i < argTam; i++{
-			if !workers[arg.Id[i]].Status{
-				if argTam > 1{
-					fmt.Printf("Worker %d is off, skipping\n", arg.Id[i])
-					fmt.Println("--------------------")
-					continue
-				} else{
-					fmt.Printf("Worker %d is off, aborting experiment\n", arg.Id[i])
-					break
-				}
-			}
-
-			workers[i].historic.Add(expid, cmd, attemps)
-	
-			token := client.Publish(workers[arg.Id[i]].Id + "/Command", byte(1), false, msg)
-			token.Wait()
-
-			go receiveControl(client, arg.Id[i], exec_t * 5)
-
-			fmt.Printf("Requesting experiment in worker %d\n", arg.Id[i])
-		}
-	}
-}
-
-func cancelExperiment(client mqtt.Client, id int, expid int64){
-	arg := make(map[string]interface{})
-	arg["id"] = expid
-	cmd := command{"cancel", "moderation command", arg}
-	msg,_ := json.Marshal(cmd)
-
-	token := client.Publish(workers[id].Id + "/Command", byte(1), false, msg)
-	token.Wait()
-
-	workers[id].ReceiveConfirmation = true
-	exp := workers[id].historic.search(expid)
-	exp.finished = true
-}
-
-func redoExperiment(client mqtt.Client, worker int, experiment *experimentLog){
-	exp := *experiment
-	workers[worker].historic.remove(experiment.id)
-
-	if len(workers) == 1 { return }
-	
-	if exp.attempts > 0{
-		exp.attempts--
-		size := len(workers)
-		var sample = make([]int, 0, size)
-		var timeout int
-
-		for i:= 0; i < size; i++{
-			if i != worker && workers[i].Status{
-				sample = append(sample, i)
-			}
-		}
-
-		cmdExp := exp.cmd.ToCommandExperiment()
-		exp.id = time.Now().Unix()
-		cmdExp.Expid = exp.id
-		cmdExp.Attempts = exp.attempts
-		timeout = cmdExp.Exec_time * 5
-		cmdExp.Attach(&exp.cmd)
-
-		nw := sample[rand.Intn(len(sample))]
-
-		msg,_ := json.Marshal(exp.cmd)
-
-		workers[nw].historic.Add(exp.id, exp.cmd, exp.attempts)
-
-		token := client.Publish(workers[nw].Id + "/Command", byte(1), false, msg)
-		token.Wait()
-
-		go receiveControl(client, nw, timeout)
-	}
-}
-
-func getInfo(client mqtt.Client, arg infoTerminal){
-	var infoCommand command
-
-	infoCommand.Name = "info"
-	infoCommand.CommandType = "command moderation"
-	infoCommand.Arguments = map[string]interface{}{"cpuDisplay":arg.CpuDisplay, "discDisplay": arg.DiscDisplay, "memoryDisplay": arg.MemoryDisplay}
-
-	msg,_ := json.Marshal(&infoCommand)
-
-	if arg.Id[0] == -1{
-		for i := 0; i < len(workers); i++{
-			if !workers[i].Status{
-				fmt.Printf("Worker %d isn't report, skipping\n", i)
-				fmt.Println("--------------------")
-				continue
-			}
-			token := client.Subscribe(workers[i].Id + "/Info", byte(1), func(c mqtt.Client, m mqtt.Message) {
-				messageHandlerInfos(m, i)
-			})
-			token.Wait()
-
-			token = client.Publish(workers[i].Id + "/Command", byte(1), false, msg)
-			token.Wait()
-
-			for !workers[i].ReceiveConfirmation{
-				if !workers[i].Status{
-					fmt.Printf("Worker %d isn't report, skipping\n", i)
-					fmt.Println("--------------------")
-					break
-				}
-				time.Sleep(time.Second)
-			}
-			workers[i].ReceiveConfirmation = false
-			token = client.Unsubscribe(workers[i].Id + "/Info")
-			token.Wait()
-		}
+	if cmdExp.Arguments != nil{
+		createLogFile,id = loadArguments("myconfig.conf", cmdExp.Arguments)
 	} else{
-		argTam := len(arg.Id)
-
-		for i:=0; i < argTam; i++{
-			if !workers[arg.Id[i]].Status{
-				if argTam > 1{
-					fmt.Printf("Worker %d is off, skipping\n", arg.Id[i])
-					fmt.Println("--------------------")
-					continue
-				} else{
-					fmt.Printf("Worker %d is off, aborting request\n", arg.Id[i])
-					break
-				}
-			}
-
-			token := client.Subscribe(workers[arg.Id[i]].Id + "/Info", byte(1), func(c mqtt.Client, m mqtt.Message) {
-				messageHandlerInfos(m, arg.Id[i])
-			})
-			token.Wait()
-	
-			token = client.Publish(workers[arg.Id[i]].Id + "/Command", byte(1), false, msg)
-			token.Wait()
-	
-			for !workers[arg.Id[i]].ReceiveConfirmation{
-				if !workers[arg.Id[i]].Status{
-					if argTam > 1{
-						fmt.Printf("Worker %d is off, skipping\n", arg.Id[i])
-						fmt.Println("--------------------")
-					} else{
-						fmt.Printf("Worker %d is off, aborting request\n", arg.Id[i])
-					}
-					break
-				}
-				time.Sleep(time.Second)
-			}
-			workers[arg.Id[i]].ReceiveConfirmation = false
-			token = client.Unsubscribe(workers[i].Id + "/Info")
-			token.Wait()
-		}
+		arg_file = ""
+		flag = ""
 	}
+
+	if experimentId != -1{
+		id = experimentId
+	}
+
+	if !fileExists("CommandsLog/experiment_"+fmt.Sprint(id)+".json"){
+		file,_ :=os.Create("CommandsLog/experiment_"+fmt.Sprint(id)+".json")
+		file.Write([]byte(commandLiteral))
+		file.Close()
+	}
+
+	logMutex.Lock()
+	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f.WriteString("start experiment "+ strconv.FormatInt(id, 10) + "\n")
+	f.Close()
+	logMutex.Unlock()
+
+	cmd := exec.Command("./"+tool, flag ,arg_file)
+
+	mess,_ := json.Marshal(status{fmt.Sprintf("Experiment Status %d", id), "start", cmdExp}) 
+	t := client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
+	t.Wait()
+	var output bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &stderr
+	err := cmd.Start()
+
+	experimentNode := ongoingExperiment{id, false, cmd.Process, 1,nil, nil}
+
+	experimentListMutex.Lock()
+	experimentList.add(&experimentNode)
+	experimentListMutex.Unlock()
+
+	cmd.Wait()
+
+	experimentListMutex.Lock()
+	if experimentNode.finished{
+		experimentList.remove(id)
+		experimentListMutex.Unlock()
+		return
+	}
+	experimentList.remove(id)
+	experimentListMutex.Unlock()
+	
+	if err != nil{
+		mess,_ = json.Marshal(status{fmt.Sprintf("Experiment Status %d", id) , fmt.Sprint(err) + ": " + stderr.String(), command{}})
+		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
+		t.Wait()
+
+		mess,_ = json.Marshal(status{"Client Status", "offline " + err.Error(), command{}})
+		t = client.Publish(clientID+"/Status", byte(1), true, string(mess))
+		t.Wait()
+
+		logMutex.Lock()
+		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f.WriteString("crash experiment "+strconv.FormatInt(id, 10)+" error "+err.Error()+"\n")
+		f.Close()
+		logMutex.Unlock()
+		os.Exit(3)
+	}
+
+	resultsExperiment := extracExperimentResults(output.String(), createLogFile)
+
+	if resultsExperiment.Publish.AvgThroughput == 0{
+		mess,_ = json.Marshal(status{fmt.Sprintf("Experiment Status %d", id), "Error 10: Hardware Colapse", command{}})
+		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
+		t.Wait()
+
+		logMutex.Lock()
+		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f.WriteString("error experiment "+strconv.FormatInt(id, 10)+" hardware colapse\n")
+		f.Close()
+		logMutex.Unlock()
+	} else {
+		mess,_ = json.Marshal(status{fmt.Sprintf("Experiment Status %d", id), "finish", command{}})
+		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
+		t.Wait()
+
+		logMutex.Lock()
+		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f.WriteString("finish experiment "+strconv.FormatInt(id, 10)+"\n")
+		f.Close()
+		logMutex.Unlock()
+	}
+
+	resultsExperiment.Meta.ID = uint64(id)
+
+	results,_ := json.Marshal(resultsExperiment)
+
+	t = client.Publish(clientID+"/Experiments/Results", byte(1), false, string(results))
+	t.Wait()
+
+	os.Remove("CommandsLog/experiment_"+fmt.Sprint(id)+".json")
 }
 
-func commandExec(client mqtt.Client, session *session,c string){
-	tokens := strings.Split(c, " ")
-	rets := Parser(tokens, client, session)
+func Info(client mqtt.Client, arguments info, isUnix bool, clientID string){
+	var result infoDisplay
 
-	switch rets.(type){
-		case string:
-			f,_ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString(c + "\n")
-			f.Close()
+	logMutex.Lock()
+	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f.WriteString("execute info\n")
+	f.Close()
+	logMutex.Unlock()
+	
+	if arguments.DiscDisplay{
+		rootPath := "/"
+		if !isUnix{
+			rootPath = "\\"
+		}
+		diskStat,_ := disk.Usage(rootPath)
+		result.Disk = diskStat.Total/1024/1024
+	}
+	if arguments.MemoryDisplay{
+		vmStat, _ := mem.VirtualMemory()
+		result.Ram = vmStat.Total/1024/1024
+	}
+	if arguments.CpuDisplay{
+		cpuStat, _ := cpu.Info()
+		result.Cpu = cpuStat[0].ModelName
+	}
 
-			rets = Parser(tokens, client, session)
-			fmt.Printf("%s",rets)
+	resp,_ := json.Marshal(result)
 
-			f,_ = os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString(c + " finishing exc\n")
-			f.Close()
-		case start:
-			f,_ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString(c + "\n")
-			f.Close()
+	t := client.Publish(clientID + "/Info", byte(1), false, string(resp))
+	t.Wait()
+}
 
-			startExperiment(client, session, rets.(start))
+func getFailExperiements() []string{
+	var temp []byte
+	var experiments []string
+	logMutex.Lock()
+	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
-			f,_ = os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString(c + " finishing exc\n")
-			f.Close()
-		case infoTerminal:
-			f,_ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString(c + "\n")
-			f.Close()
+	f.Read(temp)
 
-			getInfo(client, rets.(infoTerminal))
+	logData := strings.Split(string(temp), "\n")
 
-			f,_ = os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString(c + " finishing exc\n")
-			f.Close()
-		case mqtt.Client:
-			f,_ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString(c + "\n")
-			f.Close()
-		default:
-			fmt.Println("Command not founded")
+	f.Close()
+	logMutex.Unlock()
+
+	for i := 0; i < len(logData); i++{
+		line := strings.Split(logData[i], " ")
+		if line[0] == "start"{
+			finished := false
+			for j := i; j < len(logData); j++{
+				line2 := strings.Split(logData[j], " ")
+				if (line2[0] == "finish" || line2[0] == "error") && line[2] == line2[2]{
+					finished = true
+					break
+				}
+			}
+			if !finished{
+				experiments = append(experiments, line[2])
+			}
+		}
+	}
+
+	return experiments
+}
+
+func redo(client mqtt.Client, clientID string, tool string, redoList []string){
+	for _,file := range redoList{
+		msg := getJsonFromFile("CommandsLog/experiment_"+file+".json")
+		if msg != ""{
+			var cmd command
+			err := json.Unmarshal([]byte(msg), &cmd)
+			if err != nil{
+				mess,_ := json.Marshal(status{"Client Status", "offline " + err.Error(), command{}})
+				t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
+				t.Wait()
+				logMutex.Lock()
+				f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				f.WriteString("crash "+err.Error()+"\n")
+				f.Close()
+				logMutex.Unlock()
+				os.Exit(3)
+			}
+			id,_ := strconv.ParseInt(file, 10, 64)
+			go Start(client, clientID, tool, cmd, msg, id)
+		}		
 	}
 }
 
 func main() {
 	var (
+		timeout = flag.Int("timeout", 5, "worker timeout time in minutes")
+		loginTimeout = flag.Int("login_t", 30, "login timeout in seconds")
 		broker = flag.String("broker", "tcp://localhost:1883", "broker url to worker/orquestrator communication")
-		t_interval = flag.Int("tl", 5, "orquestrator tolerance interval")
+		isUnix = flag.Bool("isunix", true, "define if worker will run a Unix system or not")
+		tool = flag.String("tool", "../source/tools/mqttloader/bin/mqttloader", "benckmark tool for the simulations")
 	)
 	flag.Parse()
-	var currentSession session;
-	currentSession.Finish = true;
-	var clientID string = "Orquestrator"
-	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
+	var clientID string = "Client_"
+	var seed rand.Source
+	var random *rand.Rand
+	var makeRegister bool = false
+	var login_confirmation bool = false
+	var register_confirmation bool = false
+	var currentSession session
 
-	if !fileExists("orquestrator.log"){
-		f,_ := os.Create("orquestrator.log")
+	currentSession.Finish = true
+
+	if !fileExists("worker.log"){
+		f,_ := os.Create("worker.log")
 		f.Close()
-	}else{
-		os.Truncate("orquestrator.log", 0)
+	} else{
+		os.Truncate("worker.log", 0)
 	}
+
+	if !fileExists("token.bin"){
+		for i := 0; i < 10; i++{
+			seed = rand.NewSource(time.Now().UnixNano())
+			random = rand.New(seed)
+			clientID += fmt.Sprintf("%d", random.Int() % 10)
+		}
+		makeRegister = true
+		login_confirmation = true
+	} else{
+		data,_ := os.ReadFile("token.bin")
+		clientID = strings.Split(string(data), "\n")[0]
+		register_confirmation = true
+	}
+
+	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
 
 	opts := mqtt.NewClientOptions().
 			AddBroker(*broker).
@@ -578,130 +443,181 @@ func main() {
 	
 	client := mqtt.NewClient(opts)
 
-	f,_ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	f.WriteString("connect mqtt.client\n")
-	f.Close()
-
 	tokenConnection := client.Connect()
 
 	tokenConnection.Wait()
 
-	token := client.Subscribe("Orquestrator/Sessions", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		err := json.Unmarshal(m.Payload(), &currentSession)
-		if err != nil{
-			fmt.Println(err.Error())
-		}
+	token := client.Subscribe(clientID+"/Login/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
+		login_confirmation = true
 	})
 	token.Wait()
 
-	token = client.Unsubscribe("Orquestrator/Sessions")
-	token.Wait()
+	token = client.Subscribe("Orquestrator/Register/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
+		response := strings.Split(string(m.Payload()), "-")
 
-	token = client.Subscribe("Orquestrator/Register", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		var clientID string = ""
-		var seed rand.Source
-		var random *rand.Rand
-
-		for i := 0; i < 10; i++{
-			seed = rand.NewSource(time.Now().UnixNano())
-			random = rand.New(seed)
-			clientID += fmt.Sprintf("%d", random.Int() % 10)
-		}
-
-		f,_ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("worker "+clientID+" register\n")
-		f.Close()
-
-		if workers[0].Id == ""{
-			workers[0] = worker{clientID, true, false, true, experimentHistory{nil}}
-	
-			t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
-			t.Wait()
-
-			setMessageHandler(client, 0)
+		if response[0] != clientID {
+			mess,_ := json.Marshal(status{"Client Status", "offline registration fail", command{}})
+			token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
+			token.Wait()
+			client.Disconnect(0)
+			logMutex.Lock()
+			f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			f.WriteString("shutdown register failure\n")
+			f.Close()
+			logMutex.Unlock()
+			os.Exit(0)
 			return
 		}
-		workers = append(workers, worker{clientID, true, false, true, experimentHistory{nil}})
 
-		t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
-		t.Wait()
+		var f *os.File
 
-		setMessageHandler(client, len(workers) - 1)
-	})
-	token.Wait()
-
-	token = client.Subscribe("Orquestrator/Login", byte(1), func(c mqtt.Client, m mqtt.Message){
-		f,_ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("worker "+string(m.Payload())+" login\n")
-		f.Close()
-		if !isIn(workers, string(m.Payload())){
-			if workers[0].Id == ""{
-				workers[0] = worker{string(m.Payload()), true, false, true, experimentHistory{nil}}
-	
-				t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true,"true")
-				t.Wait()
-
-				setMessageHandler(client, 0)
-				return
-			}
-			workers = append(workers, worker{string(m.Payload()), true, false, true, experimentHistory{nil}})
-
-			t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true,"true")
-			t.Wait()
-
-			setMessageHandler(client, len(workers) - 1)
+		if!fileExists("token.bin"){
+			f,_ = os.Create("token.bin")
 		} else{
-			id := 0
-			for i := 0; i < len(workers); i++{
-				if workers[i].Id == string(m.Payload()){
-					id = i
-					break
-				}
-			}
-			workers[id].Status = true
-			setMessageHandler(client, id)
+			f,_ = os.Open("token.bin")
 		}
+		f.Truncate(0)
+		f.Write([]byte(response[1]))
+
+		f.Close()
+		register_confirmation = true
 	})
 	token.Wait()
 
-	token = client.Subscribe("Orquestrator/Ping", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		id := 0
-		for i := 0; i < len(workers); i++{
-			if workers[i].Id == string(m.Payload()){
-				workers[i].Status = true
-				id = i
+	if makeRegister {
+		token = client.Publish("Orquestrator/Register", byte(1), false, clientID)
+		token.Wait()
+
+		cd := 0
+		for !register_confirmation{
+			if cd >= *loginTimeout{
 				break
 			}
+			time.Sleep(time.Second)
+			cd++
 		}
-		if workers[id].TestPing{
-			workers[id].TestPing = false
-			go watcher(client, id, *t_interval)
-		}else{
-			workers[id].TestPing = true
-			go watcher(client, id, *t_interval)
-			workers[id].TestPing = false
+	}else{
+		token = client.Publish("Orquestrator/Login", byte(1), false, clientID)
+		token.Wait()
+
+		cd := 0
+		for !login_confirmation{
+			if cd >= *loginTimeout{
+				break
+			}
+			time.Sleep(time.Second)
+			cd++
+		}
+	}
+
+	if !login_confirmation{
+		mess,_ := json.Marshal(status{"Client Status", "offline login fail", command{}})
+		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
+		token.Wait()
+		client.Disconnect(0)
+		logMutex.Lock()
+		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f.WriteString("shutdown login failure\n")
+		f.Close()
+		logMutex.Unlock()
+		os.Exit(0)
+	}
+
+	if !register_confirmation{
+		mess,_ := json.Marshal(status{"Client Status", "offline registration fail", command{}})
+		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
+		token.Wait()
+		client.Disconnect(0)
+		logMutex.Lock()
+		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f.WriteString("shutdown register failure\n")
+		f.Close()
+		logMutex.Unlock()
+		os.Exit(0)
+	}
+
+	mess,_ := json.Marshal(status{"Client Status", "online", command{}})
+	token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
+	token.Wait()
+
+	token = client.Subscribe(clientID+"/Command", byte(1), func(c mqtt.Client, m mqtt.Message) {
+		if m.Retained(){
+			return
+		}
+		message := m.Payload()
+
+		var commd command
+		err := json.Unmarshal(message, &commd)
+		if err != nil {
+			mess,_ = json.Marshal(status{"Client Status", "offline " + err.Error(), command{}})
+			t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
+			t.Wait()
+			logMutex.Lock()
+			f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			f.WriteString("crash "+err.Error()+"\n")
+			f.Close()
+			logMutex.Unlock()
+			os.Exit(3)
+		}
+
+		switch commd.Name{
+			case "info":
+				var arguments info
+				jsonObj,_ := json.Marshal(commd.Arguments)
+				json.Unmarshal(jsonObj, &arguments)
+
+				go Info(client, arguments, *isUnix, clientID)
+			case "start":
+				go Start(client, clientID, *tool, commd, string(m.Payload()), -1)
+			case "cancel":
+				experimentListMutex.Lock()
+				node := experimentList.search(int64(commd.Arguments["id"].(float64)))
+				if node != nil{
+					node.finished = true
+					node.proc.Kill()
+				}
+				experimentListMutex.Unlock()
 		}
 	})
 
 	token.Wait()
 
-	scanner := bufio.NewScanner(os.Stdin)
+	token = client.Subscribe(clientID+"/Ping", byte(1), func(c mqtt.Client, m mqtt.Message) {
+		Ping(client, clientID)
+	})
 
-	fmt.Printf(">> ")
-	for scanner.Scan(){
-		str := scanner.Text()
-		if str == "q"{
-			break
+	token.Wait()
+
+	token = client.Subscribe("Orquestrator/Sessions", byte(1), func(c mqtt.Client, m mqtt.Message) {
+		json.Unmarshal(m.Payload(), &currentSession.Status)
+		temp := strings.Split(currentSession.Status.Status, " ") 
+		if temp[0] == "start"{
+			currentSession.Id,_ = strconv.Atoi(temp[2])
+			currentSession.Finish = false
+		}else{
+			currentSession.Finish = true
+			os.RemoveAll("CommandsLog")
 		}
-		commandExec(client, &currentSession, str)
-		fmt.Printf(">> ")
+	})
+	token.Wait()
+
+	go workerKeepAlive(client, clientID)
+
+	if !currentSession.Finish{
+		redoList := getFailExperiements()
+		redo(client, clientID, *tool, redoList)
 	}
 
-	f,_ = os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	f.WriteString("disconnect mqtt.client\n")
+	time.Sleep(time.Minute * time.Duration(*timeout))
 
+	mess,_ = json.Marshal(status{"Client Status", "offline", command{}})
+	token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
+	token.Wait()
 	client.Disconnect(0)
 
-	f.WriteString("shutdown")
+	logMutex.Lock()
+	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f.WriteString("shutdown\n")
 	f.Close()
+	logMutex.Unlock()
 }
