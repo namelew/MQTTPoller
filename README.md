@@ -3,19 +3,16 @@ Ferramenta feita para gerar testes distribuidos de latência, vazão e perda em 
 
 Para a comunicação entre orquestrador e workers, é utilizado o protocolo MQTT. Deve existir um Broker de comunicação conhecido entre ambas as partes para que a aplicação funcione corretamente. O orquestrador deve ser iniciado antes dos workers, pois os workers são incapazes de esperar até ele estar disponível.
 ## Dependências
----
 * Golang
 * Git
 * Make
 ## Instalação
----
  ```
 git clone https://github.com/namelew/MQTTDistributedBenck MQTTDB
 cd MQTTDB
 make
  ```
 ## Utilização
----
 Para iniciar o orquestrador execute o binário orquestrator, que será gerado no diretório bin, ele possui as seguintes flags de configuração:
 
 | Flag | Default value | Description |
