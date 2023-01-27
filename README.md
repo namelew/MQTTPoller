@@ -20,7 +20,7 @@ git clone https://github.com/namelew/MQTTDistributedBenck orquestrator
 git clone -b worker https://github.com/namelew/MQTTDistributedBenck worker
 cd ..
 docker build -t mqttdb/orquestrator:1 -f "images/orquestrator.dockerfile" .
-docker build -t mqttdb/workers:1 -f "images/worker.dockerfile" .
+docker build -t mqttdb/worker:1 -f "images/worker.dockerfile" .
 docker compose up -d
 ```
 ## Utilização

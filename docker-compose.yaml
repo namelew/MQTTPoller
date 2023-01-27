@@ -21,8 +21,8 @@ services:
     depends_on:
       - broker
   workers:
-    container_name: workers
-    image: mqttdb/workers:1
+    container_name: worker
+    image: mqttdb/worker:1
     networks:
      - example_experiment_network
     environment:

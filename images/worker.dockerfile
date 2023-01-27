@@ -6,10 +6,10 @@ ENV tool="source/tools/mqttloader/bin/mqttloader"
 ENV broker="tcp://localhost:1883"
 
 WORKDIR /app
-COPY dump/orquestrator/ /app/
+COPY dump/worker/ /app/
 
 RUN apt-get update; apt-get upgrade -y
 RUN apt-get install git make -y
 RUN make
 
-ENTRYPOINT cd bin; ./orquestrator --broker ${broker} --timeout ${timeout} --tool ${tool} --login_t ${login_t}
+ENTRYPOINT cd bin; ./worker --broker ${broker} --timeout ${timeout} --tool ${tool} --login_t ${login_t}
