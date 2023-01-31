@@ -501,11 +501,11 @@ func main() {
 	token.Wait()
 
 	api := echo.New()
-	e.GET("/orquestrator/worker", nil)
-	e.GET("/orquestrator/info", nil)
-	e.POST("/orquestrator/experiment/start", nil)
-	e.POST("/orquestrator/experiment/cancel", nil)
-	e.Logger.Fatal(e.Start(":8080"))
+	api.GET("/orquestrator/worker", nil)
+	api.GET("/orquestrator/info", nil)
+	api.POST("/orquestrator/experiment/start", nil)
+	api.POST("/orquestrator/experiment/cancel", nil)
+	api.Logger.Fatal(api.Start(":8080"))
 
 	f, _ = os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	f.WriteString("disconnect mqtt.client\n")
