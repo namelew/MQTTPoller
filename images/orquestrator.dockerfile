@@ -10,4 +10,6 @@ RUN apt-get update; apt-get upgrade -y
 RUN apt-get install git make -y
 RUN make
 
+EXPOSE 8080
+
 ENTRYPOINT cd bin; ./orquestrator --broker tcp://${broker}:1883 --tl ${tolerance}

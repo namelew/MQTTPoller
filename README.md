@@ -16,7 +16,7 @@ make
 ```
 mkdir dump
 cd dump
-git clone https://github.com/namelew/MQTTDistributedBenck orquestrator
+git clone -b orquestrator https://github.com/namelew/MQTTDistributedBenck orquestrator
 git clone -b worker https://github.com/namelew/MQTTDistributedBenck worker
 cd ..
 docker build -t mqttdb/orquestrator:1 -f "images/orquestrator.dockerfile" .

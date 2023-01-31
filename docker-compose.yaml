@@ -13,6 +13,8 @@ services:
   orquestrator:
     container_name: orquestrator
     image: mqttdb/orquestrator:1
+    ports:
+      - 8080:8080
     networks:
      - example_experiment_network
     environment:
