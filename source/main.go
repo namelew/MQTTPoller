@@ -364,6 +364,26 @@ func getInfo(client mqtt.Client, arg infoTerminal) {
 	}
 }
 
+func getWorker(c echo.Context) error {
+	json_map := make(map[string]interface{})
+	err := json.NewDecoder(c.Request().Body).Decode(&json_map)
+
+	if err != nil {
+		return err
+	}
+
+	switch (reflect.TypeOf(json_map["wid"])).Name(){
+	case "slice":
+		wids := json_map["wid"]
+	case "int":
+		wid := json_map["wid"]
+	default:
+		for i:=0; i < len(workers); i++{
+			
+		}
+	}
+}
+
 func main() {
 	var (
 		broker     = flag.String("broker", "tcp://localhost:1883", "broker url to worker/orquestrator communication")
@@ -501,7 +521,7 @@ func main() {
 	token.Wait()
 
 	api := echo.New()
-	api.GET("/orquestrator/worker", nil)
+	api.GET("/orquestrator/worker", getWorker)
 	api.GET("/orquestrator/info", nil)
 	api.POST("/orquestrator/experiment/start", nil)
 	api.POST("/orquestrator/experiment/cancel", nil)
