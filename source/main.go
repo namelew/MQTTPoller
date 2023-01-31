@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labstack/echo"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -498,7 +500,12 @@ func main() {
 
 	token.Wait()
 
-	// API code
+	api := echo.New()
+	e.GET("/orquestrator/worker", nil)
+	e.GET("/orquestrator/info", nil)
+	e.POST("/orquestrator/experiment/start", nil)
+	e.POST("/orquestrator/experiment/cancel", nil)
+	e.Logger.Fatal(e.Start(":8080"))
 
 	f, _ = os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	f.WriteString("disconnect mqtt.client\n")
