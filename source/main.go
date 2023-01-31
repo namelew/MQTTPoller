@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"reflect"
 
 	"github.com/labstack/echo"
 
@@ -364,7 +365,12 @@ func getInfo(client mqtt.Client, arg infoTerminal) {
 	}
 }
 
-func getWorker(c echo.Context) error {
+func retWorker(c echo.Context) error {
+	type workerJson struct{
+		Id string
+		Online bool
+		History []interface{}
+	}
 	json_map := make(map[string]interface{})
 	err := json.NewDecoder(c.Request().Body).Decode(&json_map)
 
@@ -373,15 +379,32 @@ func getWorker(c echo.Context) error {
 	}
 
 	switch (reflect.TypeOf(json_map["wid"])).Name(){
-	case "slice":
-		wids := json_map["wid"]
-	case "int":
-		wid := json_map["wid"]
-	default:
+	case "float64":
+		tempid,ok := json_map["wid"].(float64)
+		if !ok {
+			return  echo.ErrInternalServerError
+		}
+
+		wid := int(tempid) - 1
+		
+		temp_hist := make([]interface{}, 1)
+		//temp_hist = workers[wid].historic.Print(temp_hist) // print errado
+		response := workerJson{workers[wid].Id, workers[wid].Status, temp_hist}
+
+		return c.JSON(200, response)
+
+	case "string":
 		for i:=0; i < len(workers); i++{
 			
 		}
+	default:
+		// array mapeia pra []interface{}
 	}
+	return nil
+}
+
+func retInfo(c echo.Context) error {
+	return nil
 }
 
 func main() {
@@ -521,8 +544,8 @@ func main() {
 	token.Wait()
 
 	api := echo.New()
-	api.GET("/orquestrator/worker", getWorker)
-	api.GET("/orquestrator/info", nil)
+	api.GET("/orquestrator/worker", retWorker)
+	api.GET("/orquestrator/info", retInfo)
 	api.POST("/orquestrator/experiment/start", nil)
 	api.POST("/orquestrator/experiment/cancel", nil)
 	api.Logger.Fatal(api.Start(":8080"))
