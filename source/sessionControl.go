@@ -209,11 +209,11 @@ func (node *experimentLog) sweep(test func(a *experimentLog) bool) *experimentLo
 	return result
 }
 
-func (tree *experimentHistory) Print(array []interface{}) []interface{}{
-	return tree.root.print(array)
+func (tree *experimentHistory) Print(array []interface{}){
+	tree.root.print(array)
 }
 
-func (node *experimentLog) print(array []interface{}) []interface{}{
+func (node *experimentLog) print(array []interface{}) {
 	data := make(map[string]interface{})
 	data["Id"] = node.id
 	data["Command"] = node.cmd
@@ -222,14 +222,12 @@ func (node *experimentLog) print(array []interface{}) []interface{}{
 	array = append(array, data)
 
 	if node.left != nil {
-		array = node.left.print(array)
+		node.left.print(array)
 	}
 
 	if node.right != nil {
-		array = node.right.print(array)
+		node.right.print(array)
 	}
-
-	return array
 }
 
 func (tree *experimentHistory) GetUnfinish() *experimentLog{

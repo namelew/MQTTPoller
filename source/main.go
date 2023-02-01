@@ -367,7 +367,8 @@ func getInfo(client mqtt.Client, arg infoTerminal) {
 
 func retWorker(c echo.Context) error {
 	type workerJson struct{
-		Id string
+		Id  int
+		NetId string
 		Online bool
 		History []interface{}
 	}
@@ -389,7 +390,7 @@ func retWorker(c echo.Context) error {
 		
 		temp_hist := make([]interface{}, 1)
 		//temp_hist = workers[wid].historic.Print(temp_hist) // print errado
-		response := workerJson{workers[wid].Id, workers[wid].Status, temp_hist}
+		response := workerJson{wid, workers[wid].Id, workers[wid].Status, temp_hist}
 
 		return c.JSON(200, response)
 
