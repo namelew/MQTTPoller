@@ -115,20 +115,20 @@ func isIn(workers []worker, clientID string) bool {
 
 func receiveControl(client mqtt.Client, id int, timeout int) {
 	var start int64 = time.Now().UnixMilli()
-	log := workers[id].historic.root.findLarger()
+	exlog := workers[id].historic.root.findLarger()
 
 	for absInt(int(time.Now().UnixMilli()-start)) < (timeout * 1000) {
-		if workers[id].ReceiveConfirmation || !workers[id].Status || log.err {
+		if workers[id].ReceiveConfirmation || !workers[id].Status || exlog.err {
 			break
 		}
 	}
 
 	workers[id].ReceiveConfirmation = false
 
-	if (timeout*1000) <= absInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || log.err {
-		fmt.Printf("\nError in worker %d: experiment don't return\n", id)
-		log.finished = true
-		redoExperiment(client, id, log)
+	if (timeout*1000) <= absInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || exlog.err {
+		log.Printf("Error in worker %d: experiment don't return\n", id)
+		exlog.finished = true
+		redoExperiment(client, id, exlog)
 	}
 }
 
@@ -146,8 +146,7 @@ func watcher(client mqtt.Client, id int, tl int) {
 	token := client.Unsubscribe(workers[id].Id + "/Experiments/Results")
 	token.Wait()
 
-	fmt.Printf("\nWorker %d is off\n", id)
-	fmt.Print(">> ")
+	log.Printf("Worker %d is off\n", id)
 }
 
 func messageHandlerExperiment(m mqtt.Message, id int) {
@@ -167,10 +166,7 @@ func messageHandlerExperiment(m mqtt.Message, id int) {
 		ioutil.WriteFile(workers[id].Id+output.Meta.LogFile.Name, output.Meta.LogFile.Data, 0644)
 	}
 
-	fmt.Printf("\nID: %d\n", id)
-	fmt.Println(output.Meta.Literal)
-	fmt.Println("--------------------")
-	fmt.Print(">> ")
+	log.Printf("Experiment %d in worker %d return\n", output.Meta.ID, id)
 }
 
 func messageHandlerInfos(m mqtt.Message, id int) {
@@ -179,12 +175,10 @@ func messageHandlerInfos(m mqtt.Message, id int) {
 	json.Unmarshal(m.Payload(), &output)
 	workers[id].ReceiveConfirmation = true
 
-	fmt.Printf("ID: %d\n", id)
-	fmt.Printf("CPU: %s\n", output.Cpu)
-	fmt.Printf("RAM: %d\n", output.Ram)
-	fmt.Printf("Storage: %d\n", output.Disk)
-
-	fmt.Println("--------------------")
+	//fmt.Printf("ID: %d\n", id)
+	//fmt.Printf("CPU: %s\n", output.Cpu)
+	//fmt.Printf("RAM: %d\n", output.Ram)
+	//fmt.Printf("Storage: %d\n", output.Disk)
 }
 
 func startExperiment(client mqtt.Client, session *session, arg start) {
@@ -194,8 +188,7 @@ func startExperiment(client mqtt.Client, session *session, arg start) {
 	if arg.Id[0] == -1 {
 		for i := 0; i < len(workers); i++ {
 			if !workers[i].Status {
-				fmt.Printf("Worker %d is off, skipping\n", i)
-				fmt.Println("--------------------")
+				log.Printf("Worker %d is off, skipping\n", i)
 				continue
 			}
 
@@ -206,18 +199,17 @@ func startExperiment(client mqtt.Client, session *session, arg start) {
 
 			go receiveControl(client, i, exec_t*5)
 
-			fmt.Printf("Requesting experiment in worker %d\n", i)
+			log.Printf("Requesting experiment in worker %d\n", i)
 		}
 	} else {
 		argTam := len(arg.Id)
 		for i := 0; i < argTam; i++ {
 			if !workers[arg.Id[i]].Status {
 				if argTam > 1 {
-					fmt.Printf("Worker %d is off, skipping\n", arg.Id[i])
-					fmt.Println("--------------------")
+					log.Printf("Worker %d is off, skipping\n", arg.Id[i])
 					continue
 				} else {
-					fmt.Printf("Worker %d is off, aborting experiment\n", arg.Id[i])
+					log.Printf("Worker %d is off, aborting experiment\n", arg.Id[i])
 					break
 				}
 			}
@@ -229,7 +221,7 @@ func startExperiment(client mqtt.Client, session *session, arg start) {
 
 			go receiveControl(client, arg.Id[i], exec_t*5)
 
-			fmt.Printf("Requesting experiment in worker %d\n", arg.Id[i])
+			log.Printf("Requesting experiment in worker %d\n", arg.Id[i])
 		}
 	}
 }
@@ -300,8 +292,7 @@ func getInfo(client mqtt.Client, arg infoTerminal) {
 	if arg.Id[0] == -1 {
 		for i := 0; i < len(workers); i++ {
 			if !workers[i].Status {
-				fmt.Printf("Worker %d isn't report, skipping\n", i)
-				fmt.Println("--------------------")
+				log.Printf("Worker %d isn't report, skipping\n", i)
 				continue
 			}
 			token := client.Subscribe(workers[i].Id+"/Info", byte(1), func(c mqtt.Client, m mqtt.Message) {
@@ -314,8 +305,7 @@ func getInfo(client mqtt.Client, arg infoTerminal) {
 
 			for !workers[i].ReceiveConfirmation {
 				if !workers[i].Status {
-					fmt.Printf("Worker %d isn't report, skipping\n", i)
-					fmt.Println("--------------------")
+					log.Printf("Worker %d isn't report, skipping\n", i)
 					break
 				}
 				time.Sleep(time.Second)
@@ -330,11 +320,10 @@ func getInfo(client mqtt.Client, arg infoTerminal) {
 		for i := 0; i < argTam; i++ {
 			if !workers[arg.Id[i]].Status {
 				if argTam > 1 {
-					fmt.Printf("Worker %d is off, skipping\n", arg.Id[i])
-					fmt.Println("--------------------")
+					log.Printf("Worker %d is off, skipping\n", arg.Id[i])
 					continue
 				} else {
-					fmt.Printf("Worker %d is off, aborting request\n", arg.Id[i])
+					log.Printf("Worker %d is off, aborting request\n", arg.Id[i])
 					break
 				}
 			}
@@ -350,10 +339,9 @@ func getInfo(client mqtt.Client, arg infoTerminal) {
 			for !workers[arg.Id[i]].ReceiveConfirmation {
 				if !workers[arg.Id[i]].Status {
 					if argTam > 1 {
-						fmt.Printf("Worker %d is off, skipping\n", arg.Id[i])
-						fmt.Println("--------------------")
+						log.Printf("Worker %d is off, skipping\n", arg.Id[i])
 					} else {
-						fmt.Printf("Worker %d is off, aborting request\n", arg.Id[i])
+						log.Printf("Worker %d is off, aborting request\n", arg.Id[i])
 					}
 					break
 				}
@@ -387,10 +375,10 @@ func retWorker(c echo.Context) error {
 			return  echo.ErrInternalServerError
 		}
 
-		wid := int(tempid) - 1
+		wid := int(tempid)
 		
 		temp_hist := make([]interface{}, 1)
-		//temp_hist = workers[wid].historic.Print(temp_hist) // print errado
+		workers[wid].historic.Print(temp_hist)
 		response := workerJson{wid, workers[wid].Id, workers[wid].Status, temp_hist}
 
 		return c.JSON(200, response)
@@ -403,7 +391,7 @@ func retWorker(c echo.Context) error {
 		response := make([]workerJson, len(workers))
 		for i:=0; i < len(workers); i++{
 			temp_hist := make([]interface{}, 1)
-			//temp_hist = workers[wid].historic.Print(temp_hist) // print errado
+			workers[i].historic.Print(temp_hist)
 			wj := workerJson{i, workers[i].Id, workers[i].Status, temp_hist}
 			if response[0].NetId == ""{
 				response[0] = wj

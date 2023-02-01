@@ -214,6 +214,9 @@ func (tree *experimentHistory) Print(array []interface{}){
 }
 
 func (node *experimentLog) print(array []interface{}) {
+	if node == nil{
+		return
+	}
 	data := make(map[string]interface{})
 	data["Id"] = node.id
 	data["Command"] = node.cmd
