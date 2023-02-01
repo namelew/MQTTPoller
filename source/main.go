@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -368,8 +367,8 @@ func retWorker(c echo.Context) error {
 		return err
 	}
 
-	switch (reflect.TypeOf(json_map["wid"])).Name(){
-	case "float64":
+	switch json_map["wid"].(type){
+	case float64:
 		tempid,ok := json_map["wid"].(float64)
 		if !ok {
 			return  echo.ErrInternalServerError
@@ -383,10 +382,34 @@ func retWorker(c echo.Context) error {
 
 		return c.JSON(200, response)
 
-	case "string":
-		for i:=0; i < len(workers); i++{
-			
+	case []interface{}:
+		workersid,ok := json_map["wid"].([]interface{})
+		response := make([]workerJson, len(workers))
+
+		if !ok {
+			return  echo.ErrInternalServerError
 		}
+
+		for i:=0; i < len(workers); i++{
+			tempid,ok := workersid[i].(float64)
+
+			if !ok {
+				return  echo.ErrInternalServerError
+			}
+
+			wid := int(tempid)
+			temp_hist := make([]interface{}, 1)
+			workers[wid].historic.Print(temp_hist)
+			wj := workerJson{wid, workers[wid].Id, workers[wid].Status, temp_hist}
+
+			if response[0].NetId == ""{
+				response[0] = wj
+			} else{
+				response = append(response, wj)
+			}
+		}
+
+		return c.JSON(200,response)
 	default:
 		response := make([]workerJson, len(workers))
 		for i:=0; i < len(workers); i++{
@@ -401,7 +424,6 @@ func retWorker(c echo.Context) error {
 		}
 		return c.JSON(200,response)
 	}
-	return nil
 }
 
 func retInfo(c echo.Context) error {
