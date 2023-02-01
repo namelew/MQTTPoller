@@ -219,7 +219,11 @@ func (node *experimentLog) print(array []interface{}) {
 	data["Command"] = node.cmd
 	data["Finished"] = node.finished
 
-	array = append(array, data)
+	if len(array) == 1{
+		array[0] = data
+	} else{
+		array = append(array, data)
+	}
 
 	if node.left != nil {
 		node.left.print(array)

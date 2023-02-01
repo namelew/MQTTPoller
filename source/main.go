@@ -5,12 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
-	"reflect"
 
 	"github.com/labstack/echo"
 
@@ -399,7 +400,18 @@ func retWorker(c echo.Context) error {
 			
 		}
 	default:
-		// array mapeia pra []interface{}
+		response := make([]workerJson, len(workers))
+		for i:=0; i < len(workers); i++{
+			temp_hist := make([]interface{}, 1)
+			//temp_hist = workers[wid].historic.Print(temp_hist) // print errado
+			wj := workerJson{i, workers[i].Id, workers[i].Status, temp_hist}
+			if response[0].NetId == ""{
+				response[0] = wj
+			} else{
+				response = append(response, wj)
+			}
+		}
+		return c.JSON(200,response)
 	}
 	return nil
 }
