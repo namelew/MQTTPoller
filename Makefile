@@ -3,9 +3,8 @@ EXE=orquestrator
 all: build
 
 build:
-	go mod init puppy
-	go build -o bin/$(EXE) -modfile source/go.mod source/main.go
-	rm -f go.mod
+	go mod init tidy
+	go build -o bin/$(EXE) source/main.go
 
 clean:
 	rm -f bin/$(EXE)
