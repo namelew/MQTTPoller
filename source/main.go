@@ -52,12 +52,12 @@ func messageHandlerExperimentStatus(client mqtt.Client, msg mqtt.Message, id int
 		return
 	case "finish":
 		if exp != nil {
-			exp.finished = true
+			exp.Finished = true
 		}
 	default:
 		if exp != nil {
-			exp.finished = true
-			exp.err = true
+			exp.Finished = true
+			exp.Err = true
 			redoExperiment(client, id, exp)
 		}
 	}
@@ -77,16 +77,16 @@ func receiveControl(client mqtt.Client, id int, timeout int) {
 	exlog := workers[id].Historic.FindLarger()
 
 	for absInt(int(time.Now().UnixMilli()-start)) < (timeout * 1000) {
-		if workers[id].ReceiveConfirmation || !workers[id].Status || exlog.err {
+		if workers[id].ReceiveConfirmation || !workers[id].Status || exlog.Err {
 			break
 		}
 	}
 
 	workers[id].ReceiveConfirmation = false
 
-	if (timeout*1000) <= absInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || exlog.err {
+	if (timeout*1000) <= absInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || exlog.Err {
 		log.Printf("Error in worker %d: experiment don't return\n", id)
-		exlog.finished = true
+		exlog.Finished = true
 		redoExperiment(client, id, exlog)
 	}
 }
@@ -109,12 +109,12 @@ func watcher(client mqtt.Client, id int, tl int) {
 }
 
 func messageHandlerExperiment(m mqtt.Message, id int) {
-	var output experimentResult
+	var output messages.ExperimentResult
 
 	worker := workers[id].Historic.FindLarger()
 
 	if worker != nil {
-		worker.finished = true
+		worker.Finished = true
 	}
 
 	workers[id].ReceiveConfirmation = true
@@ -129,7 +129,7 @@ func messageHandlerExperiment(m mqtt.Message, id int) {
 }
 
 func messageHandlerInfos(m mqtt.Message, id int) {
-	var output infoDisplay
+	var output messages.InfoDisplay
 
 	json.Unmarshal(m.Payload(), &output)
 	workers[id].ReceiveConfirmation = true
@@ -140,7 +140,7 @@ func messageHandlerInfos(m mqtt.Message, id int) {
 	//fmt.Printf("Storage: %d\n", output.Disk)
 }
 
-func startExperiment(client mqtt.Client, session *session, arg start) {
+func startExperiment(client mqtt.Client, session *messages.Session, arg messages.Start) {
 	expid := time.Now().Unix()
 	msg, exec_t, cmd, attemps := utils.GetJsonFromFile(arg.JsonArg, expid)
 
@@ -188,7 +188,7 @@ func startExperiment(client mqtt.Client, session *session, arg start) {
 func cancelExperiment(client mqtt.Client, id int, expid int64) {
 	arg := make(map[string]interface{})
 	arg["id"] = expid
-	cmd := Command{"cancel", "moderation command", arg}
+	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: arg}
 	msg, _ := json.Marshal(cmd)
 
 	token := client.Publish(workers[id].Id+"/Command", byte(1), false, msg)
@@ -196,19 +196,19 @@ func cancelExperiment(client mqtt.Client, id int, expid int64) {
 
 	workers[id].ReceiveConfirmation = true
 	exp := workers[id].Historic.Search(expid)
-	exp.finished = true
+	exp.Finished = true
 }
 
-func redoExperiment(client mqtt.Client, worker int, experiment *experimentLog) {
+func redoExperiment(client mqtt.Client, worker int, experiment *messages.ExperimentLog) {
 	exp := *experiment
-	workers[worker].Historic.Remove(experiment.id)
+	workers[worker].Historic.Remove(experiment.Id)
 
 	if len(workers) == 1 {
 		return
 	}
 
-	if exp.attempts > 0 {
-		exp.attempts--
+	if exp.Attempts > 0 {
+		exp.Attempts--
 		size := len(workers)
 		var sample = make([]int, 0, size)
 		var timeout int
@@ -219,18 +219,18 @@ func redoExperiment(client mqtt.Client, worker int, experiment *experimentLog) {
 			}
 		}
 
-		cmdExp := exp.cmd.ToCommandExperiment()
-		exp.id = time.Now().Unix()
-		cmdExp.Expid = exp.id
-		cmdExp.Attempts = exp.attempts
+		cmdExp := exp.Cmd.ToCommandExperiment()
+		exp.Id = time.Now().Unix()
+		cmdExp.Expid = exp.Id
+		cmdExp.Attempts = exp.Attempts
 		timeout = cmdExp.Exec_time * 5
-		cmdExp.Attach(&exp.cmd)
+		cmdExp.Attach(&exp.Cmd)
 
 		nw := sample[rand.Intn(len(sample))]
 
-		msg, _ := json.Marshal(exp.cmd)
+		msg, _ := json.Marshal(exp.Cmd)
 
-		workers[nw].Historic.Add(exp.id, exp.cmd, exp.attempts)
+		workers[nw].Historic.Add(exp.Id, exp.Cmd, exp.Attempts)
 
 		token := client.Publish(workers[nw].Id+"/Command", byte(1), false, msg)
 		token.Wait()
@@ -239,8 +239,8 @@ func redoExperiment(client mqtt.Client, worker int, experiment *experimentLog) {
 	}
 }
 
-func getInfo(client mqtt.Client, arg infoTerminal) {
-	var infoCommand Command
+func getInfo(client mqtt.Client, arg messages.InfoTerminal) {
+	var infoCommand messages.Command
 
 	infoCommand.Name = "info"
 	infoCommand.CommandType = "command moderation"
@@ -396,7 +396,7 @@ func main() {
 		t_interval = flag.Int("tl", 5, "orquestrator tolerance interval")
 	)
 	flag.Parse()
-	var currentSession session
+	var currentSession messages.Session
 	currentSession.Finish = true
 	var clientID string = "Orquestrator"
 	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
@@ -454,7 +454,7 @@ func main() {
 		f.Close()
 
 		if workers[0].Id == "" {
-			workers[0] = messages.Worker{clientID, true, false, true, experimentHistory{nil}}
+			workers[0] = messages.Worker{Id: clientID, Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
 
 			t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
 			t.Wait()
@@ -462,7 +462,7 @@ func main() {
 			setMessageHandler(client, 0)
 			return
 		}
-		workers = append(workers, messages.Worker{clientID, true, false, true, experimentHistory{nil}})
+		workers = append(workers, messages.Worker{Id: clientID, Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}})
 
 		t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
 		t.Wait()
@@ -477,7 +477,7 @@ func main() {
 		f.Close()
 		if !isIn(workers, string(m.Payload())) {
 			if workers[0].Id == "" {
-				workers[0] = messages.Worker{string(m.Payload()), true, false, true, experimentHistory{nil}}
+				workers[0] = messages.Worker{Id: string(m.Payload()), Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
 
 				t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true, "true")
 				t.Wait()
@@ -485,7 +485,7 @@ func main() {
 				setMessageHandler(client, 0)
 				return
 			}
-			workers = append(workers, messages.Worker{string(m.Payload()), true, false, true, experimentHistory{nil}})
+			workers = append(workers, messages.Worker{Id: string(m.Payload()), Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}})
 
 			t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true, "true")
 			t.Wait()

@@ -60,26 +60,26 @@ type metaExperimentResult struct {
 	LogFile         file   `json:"log_file"`
 }
 
-type experimentResult struct {
+type ExperimentResult struct {
 	Meta      metaExperimentResult       `json:"meta"`
 	Publish   publisherExperimentResult  `json:"publish"`
 	Subscribe subscriberExperimentResult `json:"subscribe"`
 }
 
-type infoTerminal struct {
+type InfoTerminal struct {
 	Id            []int
 	MemoryDisplay bool
 	CpuDisplay    bool
 	DiscDisplay   bool
 }
 
-type start struct {
+type Start struct {
 	Id      []int
 	JsonArg string
 	ExeMode string
 }
 
-type infoDisplay struct {
+type InfoDisplay struct {
 	Cpu  string
 	Ram  uint64
 	Disk uint64

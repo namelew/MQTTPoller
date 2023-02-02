@@ -15,12 +15,12 @@ type Session struct {
 }
 
 type ExperimentLog struct {
-	id       int64
-	attempts int
-	cmd      Command
+	Id       int64
+	Attempts int
+	Cmd      Command
 	height   int
-	err      bool
-	finished bool
+	Err      bool
+	Finished bool
 	left     *ExperimentLog
 	right    *ExperimentLog
 }
@@ -40,7 +40,7 @@ func (tree *ExperimentHistory) Add(id int64, cmd Command, attemps int) {
 }
 
 func (node *ExperimentLog) add(newNode *ExperimentLog) {
-	if newNode.id <= node.id {
+	if newNode.Id <= node.Id {
 		if node.left == nil {
 			node.left = newNode
 		} else {
@@ -67,9 +67,9 @@ func (node *ExperimentLog) search(id int64) *ExperimentLog {
 	if node == nil {
 		return nil
 	}
-	if id < node.id {
+	if id < node.Id {
 		return node.left.search(id)
-	} else if id > node.id {
+	} else if id > node.Id {
 		return node.right.search(id)
 	} else {
 		return node
@@ -80,18 +80,18 @@ func (node *ExperimentLog) remove(id int64) *ExperimentLog {
 	if node == nil {
 		return nil
 	}
-	if id < node.id {
+	if id < node.Id {
 		node.left = node.left.remove(id)
-	} else if id > node.id {
+	} else if id > node.Id {
 		node.right = node.right.remove(id)
 	} else {
 		if node.left != nil && node.right != nil {
 			rightMinNode := node.right.findSmallest()
-			node.id = rightMinNode.id
-			node.cmd = rightMinNode.cmd
-			node.finished = rightMinNode.finished
-			node.err = rightMinNode.err
-			node.right = node.right.remove(rightMinNode.id)
+			node.Id = rightMinNode.Id
+			node.Cmd = rightMinNode.Cmd
+			node.Finished = rightMinNode.Finished
+			node.Err = rightMinNode.Err
+			node.right = node.right.remove(rightMinNode.Id)
 		} else if node.left != nil {
 			node = node.left
 		} else if node.right != nil {
@@ -222,9 +222,9 @@ func (node *ExperimentLog) print(array []interface{}) {
 		return
 	}
 	data := make(map[string]interface{})
-	data["Id"] = node.id
-	data["Command"] = node.cmd
-	data["Finished"] = node.finished
+	data["Id"] = node.Id
+	data["Command"] = node.Cmd
+	data["Finished"] = node.Finished
 
 	if len(array) == 1 {
 		array[0] = data
@@ -243,7 +243,7 @@ func (node *ExperimentLog) print(array []interface{}) {
 
 func (tree *ExperimentHistory) GetUnfinish() *ExperimentLog {
 	return tree.Sweep(func(a *ExperimentLog) bool {
-		return !a.finished
+		return !a.Finished
 	})
 }
 
