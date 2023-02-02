@@ -15,17 +15,11 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/messages"
+	"github.com/namelew/mqtt-bm-latency/output"
 	"github.com/namelew/mqtt-bm-latency/utils"
 )
 
 var workers = make([]messages.Worker, 1, 10)
-
-func absInt(x int) int {
-	if x < 0 {
-		return (x * -1)
-	}
-	return x
-}
 
 func setMessageHandler(client mqtt.Client, id int) {
 	token := client.Subscribe(workers[id].Id+"/Experiments/Results", byte(1), func(c mqtt.Client, m mqtt.Message) {
@@ -63,20 +57,11 @@ func messageHandlerExperimentStatus(client mqtt.Client, msg mqtt.Message, id int
 	}
 }
 
-func isIn(workers []messages.Worker, clientID string) bool {
-	for _, w := range workers {
-		if clientID == w.Id {
-			return true
-		}
-	}
-	return false
-}
-
 func receiveControl(client mqtt.Client, id int, timeout int) {
 	var start int64 = time.Now().UnixMilli()
 	exlog := workers[id].Historic.FindLarger()
 
-	for absInt(int(time.Now().UnixMilli()-start)) < (timeout * 1000) {
+	for utils.AbsInt(int(time.Now().UnixMilli()-start)) < (timeout * 1000) {
 		if workers[id].ReceiveConfirmation || !workers[id].Status || exlog.Err {
 			break
 		}
@@ -84,7 +69,7 @@ func receiveControl(client mqtt.Client, id int, timeout int) {
 
 	workers[id].ReceiveConfirmation = false
 
-	if (timeout*1000) <= absInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || exlog.Err {
+	if (timeout*1000) <= utils.AbsInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || exlog.Err {
 		log.Printf("Error in worker %d: experiment don't return\n", id)
 		exlog.Finished = true
 		redoExperiment(client, id, exlog)
@@ -94,7 +79,7 @@ func receiveControl(client mqtt.Client, id int, timeout int) {
 func watcher(client mqtt.Client, id int, tl int) {
 	var start int64 = time.Now().UnixMilli()
 
-	for absInt(int(time.Now().UnixMilli()-start)) < (tl * 1000) {
+	for utils.AbsInt(int(time.Now().UnixMilli()-start)) < (tl * 1000) {
 		if workers[id].TestPing {
 			return
 		}
@@ -109,7 +94,7 @@ func watcher(client mqtt.Client, id int, tl int) {
 }
 
 func messageHandlerExperiment(m mqtt.Message, id int) {
-	var output messages.ExperimentResult
+	var output output.ExperimentResult
 
 	worker := workers[id].Historic.FindLarger()
 
@@ -129,7 +114,7 @@ func messageHandlerExperiment(m mqtt.Message, id int) {
 }
 
 func messageHandlerInfos(m mqtt.Message, id int) {
-	var output messages.InfoDisplay
+	var output output.Info
 
 	json.Unmarshal(m.Payload(), &output)
 	workers[id].ReceiveConfirmation = true
@@ -314,12 +299,6 @@ func getInfo(client mqtt.Client, arg messages.InfoTerminal) {
 }
 
 func retWorker(c echo.Context) error {
-	type workerJson struct {
-		Id      int
-		NetId   string
-		Online  bool
-		History []interface{}
-	}
 	json_map := make(map[string]interface{})
 	err := json.NewDecoder(c.Request().Body).Decode(&json_map)
 
@@ -338,13 +317,13 @@ func retWorker(c echo.Context) error {
 
 		temp_hist := make([]interface{}, 1)
 		workers[wid].Historic.Print(temp_hist)
-		response := workerJson{wid, workers[wid].Id, workers[wid].Status, temp_hist}
+		response := output.Worker{Id: wid, NetId: workers[wid].Id, Online: workers[wid].Status, History: temp_hist}
 
 		return c.JSON(200, response)
 
 	case []interface{}:
 		workersid, ok := json_map["wid"].([]interface{})
-		response := make([]workerJson, len(workers))
+		response := make([]output.Worker, len(workers))
 
 		if !ok {
 			return echo.ErrInternalServerError
@@ -360,7 +339,7 @@ func retWorker(c echo.Context) error {
 			wid := int(tempid)
 			temp_hist := make([]interface{}, 1)
 			workers[wid].Historic.Print(temp_hist)
-			wj := workerJson{wid, workers[wid].Id, workers[wid].Status, temp_hist}
+			wj := output.Worker{Id: wid, NetId: workers[wid].Id, Online: workers[wid].Status, History: temp_hist}
 
 			if response[0].NetId == "" {
 				response[0] = wj
@@ -371,11 +350,11 @@ func retWorker(c echo.Context) error {
 
 		return c.JSON(200, response)
 	default:
-		response := make([]workerJson, len(workers))
+		response := make([]output.Worker, len(workers))
 		for i := 0; i < len(workers); i++ {
 			temp_hist := make([]interface{}, 1)
 			workers[i].Historic.Print(temp_hist)
-			wj := workerJson{i, workers[i].Id, workers[i].Status, temp_hist}
+			wj := output.Worker{Id: i, NetId: workers[i].Id, Online: workers[i].Status, History: temp_hist}
 			if response[0].NetId == "" {
 				response[0] = wj
 			} else {
@@ -475,7 +454,7 @@ func main() {
 		f, _ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		f.WriteString("worker " + string(m.Payload()) + " login\n")
 		f.Close()
-		if !isIn(workers, string(m.Payload())) {
+		if !utils.IsIn(workers, string(m.Payload())) {
 			if workers[0].Id == "" {
 				workers[0] = messages.Worker{Id: string(m.Payload()), Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
 

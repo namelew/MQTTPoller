@@ -36,36 +36,6 @@ type CommandExperiment struct {
 	TlsKeystorePassword   string `json:"tls_keystore_pass"`
 }
 
-type subscriberExperimentResult struct {
-	Throughput        float64 `json:"max_throughput"`
-	AvgThroughput     float64 `json:"avg_throughput"`
-	ReceivedMessages  int     `json:"received_messages"`
-	PerSecondThrouput []int   `json:"per_second_throungput"`
-	Latency           float64 `json:"latency"`
-	AvgLatency        float64 `json:"avg_latency"`
-}
-
-type publisherExperimentResult struct {
-	Throughput        float64 `json:"max_throughput"`
-	AvgThroughput     float64 `json:"avg_throughput"`
-	PubMessages       int     `json:"publiqued_messages"`
-	PerSecondThrouput []int   `json:"per_second_throungput"`
-}
-
-type metaExperimentResult struct {
-	ID              uint64 `json:"id"`
-	ExperimentError string `json:"error"`
-	ToolName        string `json:"tool"`
-	Literal         string `json:"literal"`
-	LogFile         file   `json:"log_file"`
-}
-
-type ExperimentResult struct {
-	Meta      metaExperimentResult       `json:"meta"`
-	Publish   publisherExperimentResult  `json:"publish"`
-	Subscribe subscriberExperimentResult `json:"subscribe"`
-}
-
 type InfoTerminal struct {
 	Id            []int
 	MemoryDisplay bool
@@ -79,22 +49,10 @@ type Start struct {
 	ExeMode string
 }
 
-type InfoDisplay struct {
-	Cpu  string
-	Ram  uint64
-	Disk uint64
-}
-
 type Command struct {
 	Name        string                 `json:"name"`
 	CommandType string                 `json:"commandType"`
 	Arguments   map[string]interface{} `json:"arguments"`
-}
-
-type file struct {
-	Name      string `json:"name"`
-	Data      []byte `json:"data"`
-	Extension string `json:"extension"`
 }
 
 type Worker struct {
