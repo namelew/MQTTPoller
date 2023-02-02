@@ -1,69 +1,69 @@
-package main
+package messages
 
-type status struct{
-	Type string `json:"type"`
-	Status string `json:"status"`
-	Attr command `json:"attr"`
+type Status struct {
+	Type   string  `json:"type"`
+	Status string  `json:"status"`
+	Attr   Command `json:"attr"`
 }
 
-type session struct{
-	Id int
-	Finish bool
-	Status status
-	LogLevel int
+type Session struct {
+	Id             int
+	Finish         bool
+	Status         Status
+	LogLevel       int
 	ToleranceLevel int
 }
 
-type experimentLog struct{
-	id int64
+type ExperimentLog struct {
+	id       int64
 	attempts int
-	cmd command
-	height int
-	err bool
+	cmd      Command
+	height   int
+	err      bool
 	finished bool
-	left *experimentLog
-	right *experimentLog
+	left     *ExperimentLog
+	right    *ExperimentLog
 }
 
-type experimentHistory struct{
-	root *experimentLog
+type ExperimentHistory struct {
+	root *ExperimentLog
 }
 
-func (tree *experimentHistory) Add(id int64, cmd command, attemps int){
-	node := experimentLog{id, attemps, cmd, 1,false, false,nil, nil}
-	if tree.root == nil{
+func (tree *ExperimentHistory) Add(id int64, cmd Command, attemps int) {
+	node := ExperimentLog{id, attemps, cmd, 1, false, false, nil, nil}
+	if tree.root == nil {
 		tree.root = &node
-	} else{
+	} else {
 		tree.root.add(&node)
 	}
 	tree.root = tree.root.rebalanceTree()
 }
 
-func (node *experimentLog) add(newNode *experimentLog){
-	if newNode.id <= node.id{
-		if node.left == nil{
+func (node *ExperimentLog) add(newNode *ExperimentLog) {
+	if newNode.id <= node.id {
+		if node.left == nil {
 			node.left = newNode
-		}else{
+		} else {
 			node.left.add(newNode)
 		}
-	} else{
-		if node.right == nil{
+	} else {
+		if node.right == nil {
 			node.right = newNode
-		} else{
+		} else {
 			node.right.add(newNode)
 		}
 	}
 }
 
-func (tree *experimentHistory) remove(id int64){
-	tree.root  = tree.root.remove(id)
+func (tree *ExperimentHistory) Remove(id int64) {
+	tree.root = tree.root.remove(id)
 }
 
-func (tree *experimentHistory) search(id int64) *experimentLog{
+func (tree *ExperimentHistory) Search(id int64) *ExperimentLog {
 	return tree.root.search(id)
 }
 
-func (node *experimentLog) search(id int64) *experimentLog{
+func (node *ExperimentLog) search(id int64) *ExperimentLog {
 	if node == nil {
 		return nil
 	}
@@ -76,7 +76,7 @@ func (node *experimentLog) search(id int64) *experimentLog{
 	}
 }
 
-func (node *experimentLog) remove(id int64) *experimentLog {
+func (node *ExperimentLog) remove(id int64) *ExperimentLog {
 	if node == nil {
 		return nil
 	}
@@ -105,7 +105,7 @@ func (node *experimentLog) remove(id int64) *experimentLog {
 	return node.rebalanceTree()
 }
 
-func (node *experimentLog) rebalanceTree() *experimentLog {
+func (node *ExperimentLog) rebalanceTree() *ExperimentLog {
 	if node == nil {
 		return node
 	}
@@ -126,7 +126,7 @@ func (node *experimentLog) rebalanceTree() *experimentLog {
 	return node
 }
 
-func (node *experimentLog) rotateLeft() *experimentLog {
+func (node *ExperimentLog) rotateLeft() *ExperimentLog {
 	newRoot := node.right
 	node.right = newRoot.left
 	newRoot.left = node
@@ -136,7 +136,7 @@ func (node *experimentLog) rotateLeft() *experimentLog {
 	return newRoot
 }
 
-func (node *experimentLog) rotateRight() *experimentLog {
+func (node *ExperimentLog) rotateRight() *ExperimentLog {
 	newRoot := node.left
 	node.left = newRoot.right
 	newRoot.right = node
@@ -146,14 +146,14 @@ func (node *experimentLog) rotateRight() *experimentLog {
 	return newRoot
 }
 
-func (node *experimentLog) getHeight() int {
+func (node *ExperimentLog) getHeight() int {
 	if node == nil {
 		return 0
 	}
 	return node.height
 }
 
-func (node *experimentLog) recalculateHeight() {
+func (node *ExperimentLog) recalculateHeight() {
 	node.height = 1 + max(node.left.getHeight(), node.right.getHeight())
 }
 
@@ -164,7 +164,7 @@ func max(a int, b int) int {
 	return b
 }
 
-func (node *experimentLog) findSmallest() *experimentLog {
+func (node *ExperimentLog) findSmallest() *ExperimentLog {
 	if node.left != nil {
 		return node.left.findSmallest()
 	} else {
@@ -172,7 +172,11 @@ func (node *experimentLog) findSmallest() *experimentLog {
 	}
 }
 
-func (node *experimentLog) findLarger() *experimentLog{
+func (tree *ExperimentHistory) FindLarger() *ExperimentLog {
+	return tree.root.findLarger()
+}
+
+func (node *ExperimentLog) findLarger() *ExperimentLog {
 	if node.right != nil {
 		return node.right.findLarger()
 	} else {
@@ -180,41 +184,41 @@ func (node *experimentLog) findLarger() *experimentLog{
 	}
 }
 
-func (tree *experimentHistory)sweep(test func(a *experimentLog) bool) *experimentLog{
+func (tree *ExperimentHistory) Sweep(test func(a *ExperimentLog) bool) *ExperimentLog {
 	return tree.root.sweep(test)
 }
 
-func (node *experimentLog) sweep(test func(a *experimentLog) bool) *experimentLog{
-	var result *experimentLog = nil
-	if node.left != nil && result == nil{
-		if test(node.left){
+func (node *ExperimentLog) sweep(test func(a *ExperimentLog) bool) *ExperimentLog {
+	var result *ExperimentLog = nil
+	if node.left != nil && result == nil {
+		if test(node.left) {
 			result = node.left
-		} else{
+		} else {
 			result = node.left.sweep(test)
 		}
 	}
 
-	if node.right != nil && result == nil{
-		if test(node.right){
+	if node.right != nil && result == nil {
+		if test(node.right) {
 			result = node.left
-		} else{
+		} else {
 			result = node.right.sweep(test)
 		}
 	}
 
-	if test(node){
+	if test(node) {
 		result = node
 	}
 
 	return result
 }
 
-func (tree *experimentHistory) Print(array []interface{}){
+func (tree *ExperimentHistory) Print(array []interface{}) {
 	tree.root.print(array)
 }
 
-func (node *experimentLog) print(array []interface{}) {
-	if node == nil{
+func (node *ExperimentLog) print(array []interface{}) {
+	if node == nil {
 		return
 	}
 	data := make(map[string]interface{})
@@ -222,9 +226,9 @@ func (node *experimentLog) print(array []interface{}) {
 	data["Command"] = node.cmd
 	data["Finished"] = node.finished
 
-	if len(array) == 1{
+	if len(array) == 1 {
 		array[0] = data
-	} else{
+	} else {
 		array = append(array, data)
 	}
 
@@ -237,12 +241,12 @@ func (node *experimentLog) print(array []interface{}) {
 	}
 }
 
-func (tree *experimentHistory) GetUnfinish() *experimentLog{
-	return tree.sweep(func(a *experimentLog) bool{
+func (tree *ExperimentHistory) GetUnfinish() *ExperimentLog {
+	return tree.Sweep(func(a *ExperimentLog) bool {
 		return !a.finished
 	})
 }
 
-func (tree *experimentHistory) Truncate(){
+func (tree *ExperimentHistory) Truncate() {
 	tree.root = nil
 }

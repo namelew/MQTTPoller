@@ -12,59 +12,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/labstack/echo"
+	"github.com/namelew/mqtt-bm-latency/messages"
+	"github.com/namelew/mqtt-bm-latency/utils"
 )
 
-var workers = make([]worker, 1, 10)
-
-func fileExists(file string) bool {
-	_, err := os.Stat(file)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-	return true
-}
+var workers = make([]messages.Worker, 1, 10)
 
 func absInt(x int) int {
 	if x < 0 {
 		return (x * -1)
 	}
 	return x
-}
-
-func getJsonFromFile(file string, expid int64) (string, int, command, int) {
-	if !fileExists(file) {
-		return "", 0, command{}, 0
-	}
-
-	var exec_time int
-	var attemps int
-	data, _ := os.ReadFile(file)
-
-	var temp command
-	var jsonArg commandExperiment
-
-	json.Unmarshal(data, &temp)
-
-	data, _ = json.Marshal(temp.Arguments)
-
-	json.Unmarshal(data, &jsonArg)
-
-	jsonArg.Expid = expid
-	exec_time = jsonArg.Exec_time
-	attemps = jsonArg.Attempts
-
-	data, _ = json.Marshal(jsonArg)
-
-	json.Unmarshal(data, &temp.Arguments)
-
-	data, _ = json.Marshal(temp)
-
-	return string(data), exec_time, temp, attemps
 }
 
 func setMessageHandler(client mqtt.Client, id int) {
@@ -79,13 +39,13 @@ func setMessageHandler(client mqtt.Client, id int) {
 }
 
 func messageHandlerExperimentStatus(client mqtt.Client, msg mqtt.Message, id int) {
-	var exps status
+	var exps messages.Status
 	json.Unmarshal(msg.Payload(), &exps)
 
 	tokens := strings.Split(exps.Type, " ")
 	expid, _ := strconv.Atoi(tokens[2])
 
-	exp := workers[id].historic.search(int64(expid))
+	exp := workers[id].Historic.Search(int64(expid))
 
 	switch exps.Status {
 	case "start":
@@ -103,7 +63,7 @@ func messageHandlerExperimentStatus(client mqtt.Client, msg mqtt.Message, id int
 	}
 }
 
-func isIn(workers []worker, clientID string) bool {
+func isIn(workers []messages.Worker, clientID string) bool {
 	for _, w := range workers {
 		if clientID == w.Id {
 			return true
@@ -114,7 +74,7 @@ func isIn(workers []worker, clientID string) bool {
 
 func receiveControl(client mqtt.Client, id int, timeout int) {
 	var start int64 = time.Now().UnixMilli()
-	exlog := workers[id].historic.root.findLarger()
+	exlog := workers[id].Historic.FindLarger()
 
 	for absInt(int(time.Now().UnixMilli()-start)) < (timeout * 1000) {
 		if workers[id].ReceiveConfirmation || !workers[id].Status || exlog.err {
@@ -151,7 +111,7 @@ func watcher(client mqtt.Client, id int, tl int) {
 func messageHandlerExperiment(m mqtt.Message, id int) {
 	var output experimentResult
 
-	worker := workers[id].historic.root.findLarger()
+	worker := workers[id].Historic.FindLarger()
 
 	if worker != nil {
 		worker.finished = true
@@ -182,7 +142,7 @@ func messageHandlerInfos(m mqtt.Message, id int) {
 
 func startExperiment(client mqtt.Client, session *session, arg start) {
 	expid := time.Now().Unix()
-	msg, exec_t, cmd, attemps := getJsonFromFile(arg.JsonArg, expid)
+	msg, exec_t, cmd, attemps := utils.GetJsonFromFile(arg.JsonArg, expid)
 
 	if arg.Id[0] == -1 {
 		for i := 0; i < len(workers); i++ {
@@ -191,7 +151,7 @@ func startExperiment(client mqtt.Client, session *session, arg start) {
 				continue
 			}
 
-			workers[i].historic.Add(expid, cmd, attemps)
+			workers[i].Historic.Add(expid, cmd, attemps)
 
 			token := client.Publish(workers[i].Id+"/Command", byte(1), false, msg)
 			token.Wait()
@@ -213,7 +173,7 @@ func startExperiment(client mqtt.Client, session *session, arg start) {
 				}
 			}
 
-			workers[i].historic.Add(expid, cmd, attemps)
+			workers[i].Historic.Add(expid, cmd, attemps)
 
 			token := client.Publish(workers[arg.Id[i]].Id+"/Command", byte(1), false, msg)
 			token.Wait()
@@ -228,20 +188,20 @@ func startExperiment(client mqtt.Client, session *session, arg start) {
 func cancelExperiment(client mqtt.Client, id int, expid int64) {
 	arg := make(map[string]interface{})
 	arg["id"] = expid
-	cmd := command{"cancel", "moderation command", arg}
+	cmd := Command{"cancel", "moderation command", arg}
 	msg, _ := json.Marshal(cmd)
 
 	token := client.Publish(workers[id].Id+"/Command", byte(1), false, msg)
 	token.Wait()
 
 	workers[id].ReceiveConfirmation = true
-	exp := workers[id].historic.search(expid)
+	exp := workers[id].Historic.Search(expid)
 	exp.finished = true
 }
 
 func redoExperiment(client mqtt.Client, worker int, experiment *experimentLog) {
 	exp := *experiment
-	workers[worker].historic.remove(experiment.id)
+	workers[worker].Historic.Remove(experiment.id)
 
 	if len(workers) == 1 {
 		return
@@ -270,7 +230,7 @@ func redoExperiment(client mqtt.Client, worker int, experiment *experimentLog) {
 
 		msg, _ := json.Marshal(exp.cmd)
 
-		workers[nw].historic.Add(exp.id, exp.cmd, exp.attempts)
+		workers[nw].Historic.Add(exp.id, exp.cmd, exp.attempts)
 
 		token := client.Publish(workers[nw].Id+"/Command", byte(1), false, msg)
 		token.Wait()
@@ -280,7 +240,7 @@ func redoExperiment(client mqtt.Client, worker int, experiment *experimentLog) {
 }
 
 func getInfo(client mqtt.Client, arg infoTerminal) {
-	var infoCommand command
+	var infoCommand Command
 
 	infoCommand.Name = "info"
 	infoCommand.CommandType = "command moderation"
@@ -354,10 +314,10 @@ func getInfo(client mqtt.Client, arg infoTerminal) {
 }
 
 func retWorker(c echo.Context) error {
-	type workerJson struct{
-		Id  int
-		NetId string
-		Online bool
+	type workerJson struct {
+		Id      int
+		NetId   string
+		Online  bool
 		History []interface{}
 	}
 	json_map := make(map[string]interface{})
@@ -367,62 +327,62 @@ func retWorker(c echo.Context) error {
 		return err
 	}
 
-	switch json_map["wid"].(type){
+	switch json_map["wid"].(type) {
 	case float64:
-		tempid,ok := json_map["wid"].(float64)
+		tempid, ok := json_map["wid"].(float64)
 		if !ok {
-			return  echo.ErrInternalServerError
+			return echo.ErrInternalServerError
 		}
 
 		wid := int(tempid)
-		
+
 		temp_hist := make([]interface{}, 1)
-		workers[wid].historic.Print(temp_hist)
+		workers[wid].Historic.Print(temp_hist)
 		response := workerJson{wid, workers[wid].Id, workers[wid].Status, temp_hist}
 
 		return c.JSON(200, response)
 
 	case []interface{}:
-		workersid,ok := json_map["wid"].([]interface{})
+		workersid, ok := json_map["wid"].([]interface{})
 		response := make([]workerJson, len(workers))
 
 		if !ok {
-			return  echo.ErrInternalServerError
+			return echo.ErrInternalServerError
 		}
 
-		for i:=0; i < len(workers); i++{
-			tempid,ok := workersid[i].(float64)
+		for i := 0; i < len(workers); i++ {
+			tempid, ok := workersid[i].(float64)
 
 			if !ok {
-				return  echo.ErrInternalServerError
+				return echo.ErrInternalServerError
 			}
 
 			wid := int(tempid)
 			temp_hist := make([]interface{}, 1)
-			workers[wid].historic.Print(temp_hist)
+			workers[wid].Historic.Print(temp_hist)
 			wj := workerJson{wid, workers[wid].Id, workers[wid].Status, temp_hist}
 
-			if response[0].NetId == ""{
+			if response[0].NetId == "" {
 				response[0] = wj
-			} else{
+			} else {
 				response = append(response, wj)
 			}
 		}
 
-		return c.JSON(200,response)
+		return c.JSON(200, response)
 	default:
 		response := make([]workerJson, len(workers))
-		for i:=0; i < len(workers); i++{
+		for i := 0; i < len(workers); i++ {
 			temp_hist := make([]interface{}, 1)
-			workers[i].historic.Print(temp_hist)
+			workers[i].Historic.Print(temp_hist)
 			wj := workerJson{i, workers[i].Id, workers[i].Status, temp_hist}
-			if response[0].NetId == ""{
+			if response[0].NetId == "" {
 				response[0] = wj
-			} else{
+			} else {
 				response = append(response, wj)
 			}
 		}
-		return c.JSON(200,response)
+		return c.JSON(200, response)
 	}
 }
 
@@ -441,7 +401,7 @@ func main() {
 	var clientID string = "Orquestrator"
 	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
 
-	if !fileExists("orquestrator.log") {
+	if !utils.FileExists("orquestrator.log") {
 		f, _ := os.Create("orquestrator.log")
 		f.Close()
 	} else {
@@ -494,7 +454,7 @@ func main() {
 		f.Close()
 
 		if workers[0].Id == "" {
-			workers[0] = worker{clientID, true, false, true, experimentHistory{nil}}
+			workers[0] = messages.Worker{clientID, true, false, true, experimentHistory{nil}}
 
 			t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
 			t.Wait()
@@ -502,7 +462,7 @@ func main() {
 			setMessageHandler(client, 0)
 			return
 		}
-		workers = append(workers, worker{clientID, true, false, true, experimentHistory{nil}})
+		workers = append(workers, messages.Worker{clientID, true, false, true, experimentHistory{nil}})
 
 		t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
 		t.Wait()
@@ -517,7 +477,7 @@ func main() {
 		f.Close()
 		if !isIn(workers, string(m.Payload())) {
 			if workers[0].Id == "" {
-				workers[0] = worker{string(m.Payload()), true, false, true, experimentHistory{nil}}
+				workers[0] = messages.Worker{string(m.Payload()), true, false, true, experimentHistory{nil}}
 
 				t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true, "true")
 				t.Wait()
@@ -525,7 +485,7 @@ func main() {
 				setMessageHandler(client, 0)
 				return
 			}
-			workers = append(workers, worker{string(m.Payload()), true, false, true, experimentHistory{nil}})
+			workers = append(workers, messages.Worker{string(m.Payload()), true, false, true, experimentHistory{nil}})
 
 			t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true, "true")
 			t.Wait()
