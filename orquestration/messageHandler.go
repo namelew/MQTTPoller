@@ -58,13 +58,15 @@ func messageHandlerExperiment(m mqtt.Message, id int) {
 }
 
 func messageHandlerInfos(m mqtt.Message, id int) {
+	var response messages.Info
 	var output output.Info
 
-	json.Unmarshal(m.Payload(), &output)
+	json.Unmarshal(m.Payload(), &response)
 	workers[id].ReceiveConfirmation = true
 
-	//fmt.Printf("ID: %d\n", id)
-	//fmt.Printf("CPU: %s\n", output.Cpu)
-	//fmt.Printf("RAM: %d\n", output.Ram)
-	//fmt.Printf("Storage: %d\n", output.Disk)
+	output.Id = id
+	output.NetId = workers[id].Id
+	output.Infos = response
+
+	infos = append(infos, output)
 }

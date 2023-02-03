@@ -36,11 +36,10 @@ type CommandExperiment struct {
 	TlsKeystorePassword   string `json:"tls_keystore_pass"`
 }
 
-type InfoTerminal struct {
-	Id            []int
-	MemoryDisplay bool
-	CpuDisplay    bool
-	DiscDisplay   bool
+type Info struct {
+	Cpu  string
+	Ram  uint64
+	Disk uint64
 }
 
 type Start struct {

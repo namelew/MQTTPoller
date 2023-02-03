@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/labstack/echo"
+	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/orquestration"
 	"github.com/namelew/mqtt-bm-latency/output"
 )
@@ -78,7 +79,16 @@ func retWorker(c echo.Context) error {
 }
 
 func retInfo(c echo.Context) error {
-	return nil
+	var request input.Info
+	err := json.NewDecoder(c.Request().Body).Decode(&request)
+
+	if err != nil {
+		return err
+	}
+
+	reponse := orquestration.GetInfo(request)
+
+	return c.JSON(200,reponse)
 }
 
 func main() {

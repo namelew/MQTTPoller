@@ -11,11 +11,14 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/messages"
+	"github.com/namelew/mqtt-bm-latency/output"
 	"github.com/namelew/mqtt-bm-latency/utils"
 )
 
 var workers = make([]messages.Worker, 1, 10)
+var infos = make([]output.Info, 0, 10)
 var client mqtt.Client
 
 func GetWorkers() []messages.Worker {
@@ -239,8 +242,9 @@ func cancelExperiment(id int, expid int64) {
 	exp.Finished = true
 }
 
-func getInfo(arg messages.InfoTerminal) {
+func GetInfo(arg input.Info) []output.Info{
 	var infoCommand messages.Command
+	infos = nil
 
 	infoCommand.Name = "info"
 	infoCommand.CommandType = "command moderation"
@@ -311,4 +315,6 @@ func getInfo(arg messages.InfoTerminal) {
 			token.Wait()
 		}
 	}
+
+	return infos
 }
