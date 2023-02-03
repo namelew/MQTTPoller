@@ -5,47 +5,41 @@ import (
 )
 
 type CommandExperiment struct {
-	Expid                 int64  `json:"expid"`
-	Attempts              int    `json:"attempts"`
-	Tool                  string `json:"tool"`
-	Broker                string `json:"broker"`
-	Port                  int    `json:"broker_port"`
-	MqttVersion           int    `json:"mqtt_version"`
-	NumPublishers         int    `json:"num_publishers"`
-	NumSubscriber         int    `json:"num_subscribers"`
-	QosPublisher          int    `json:"qos_publisher"`
-	QosSubscriber         int    `json:"qos_subscriber"`
-	SharedSubscrition     bool   `json:"shared_subscription"`
-	Retain                bool   `json:"retain"`
-	Topic                 string `json:"topic"`
-	Payload               int    `json:"payload"`
-	NumMessages           int    `json:"num_messages"`
-	RampUp                int    `json:"ramp_up"`
-	RampDown              int    `json:"ramp_down"`
-	Interval              int    `json:"interval"`
-	SubscriberTimeout     int    `json:"subscriber_timeout"`
-	Exec_time             int    `json:"exec_time"`
-	LogLevel              string `json:"log_level"`
-	Ntp                   string `json:"ntp"`
-	Output                bool   `json:"output"`
-	User                  string `json:"user_name"`
-	Password              string `json:"password"`
-	TlsTrustsore          string `json:"tls_truststore"`
-	TlsTruststorePassword string `json:"tls_truststore_pass"`
-	TlsKeystore           string `json:"tls_keystore"`
-	TlsKeystorePassword   string `json:"tls_keystore_pass"`
+	Expid                 int64
+	Attempts              int
+	Tool                  string
+	Broker                string
+	Port                  int
+	MqttVersion           int
+	NumPublishers         int
+	NumSubscriber         int
+	QosPublisher          int
+	QosSubscriber         int
+	SharedSubscrition     bool
+	Retain                bool
+	Topic                 string
+	Payload               int
+	NumMessages           int
+	RampUp                int
+	RampDown              int
+	Interval              int
+	SubscriberTimeout     int
+	Exec_time             int
+	LogLevel              string
+	Ntp                   string
+	Output                bool
+	User                  string
+	Password              string
+	TlsTrustsore          string
+	TlsTruststorePassword string
+	TlsKeystore           string
+	TlsKeystorePassword   string
 }
 
 type Info struct {
 	Cpu  string
 	Ram  uint64
 	Disk uint64
-}
-
-type Start struct {
-	Id      []int
-	JsonArg string
-	ExeMode string
 }
 
 type Command struct {

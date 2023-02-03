@@ -9,7 +9,7 @@ import (
 	"github.com/namelew/mqtt-bm-latency/output"
 )
 
-func retWorker(c echo.Context) error {
+func getWorker(c echo.Context) error {
 	json_map := make(map[string]interface{})
 	err := json.NewDecoder(c.Request().Body).Decode(&json_map)
 
@@ -78,7 +78,7 @@ func retWorker(c echo.Context) error {
 	}
 }
 
-func retInfo(c echo.Context) error {
+func getInfo(c echo.Context) error {
 	var request input.Info
 	err := json.NewDecoder(c.Request().Body).Decode(&request)
 
@@ -91,13 +91,17 @@ func retInfo(c echo.Context) error {
 	return c.JSON(200,reponse)
 }
 
+func startExperiment(c echo.Context) error {
+	return nil
+}
+
 func main() {
 	orquestration.Init()
 
 	api := echo.New()
-	api.GET("/orquestrator/worker", retWorker)
-	api.GET("/orquestrator/info", retInfo)
-	api.POST("/orquestrator/experiment/start", nil)
+	api.GET("/orquestrator/worker", getWorker)
+	api.GET("/orquestrator/info", getInfo)
+	api.POST("/orquestrator/experiment/start", startExperiment)
 	api.POST("/orquestrator/experiment/cancel", nil)
 	api.Logger.Fatal(api.Start(":8080"))
 

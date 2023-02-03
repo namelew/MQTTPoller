@@ -183,9 +183,51 @@ func setMessageHandler(id int) {
 	token.Wait()
 }
 
-func startExperiment(session *messages.Session, arg messages.Start) {
+func startExperiment(session *messages.Session, arg input.Start) {
 	expid := time.Now().Unix()
-	msg, exec_t, cmd, attemps := utils.GetJsonFromFile(arg.JsonArg, expid)
+	var cmd messages.Command
+	var experiment messages.CommandExperiment
+
+	cmd.Name = "start"
+	cmd.CommandType = "experiment command"
+
+	experiment.Expid = expid
+	experiment.Attempts = arg.Description.Attempts
+	experiment.Broker = arg.Description.Broker
+	experiment.Exec_time = arg.Description.Exec_time
+	experiment.Interval = arg.Description.Interval
+	experiment.LogLevel = arg.Description.LogLevel
+	experiment.MqttVersion = arg.Description.MqttVersion
+	experiment.Ntp = arg.Description.Ntp
+	experiment.NumMessages = arg.Description.NumMessages
+	experiment.NumPublishers = arg.Description.NumPublishers
+	experiment.NumSubscriber = arg.Description.NumSubscriber
+	experiment.Output = arg.Description.Output
+	experiment.Password = arg.Description.Password
+	experiment.Payload = arg.Description.Payload
+	experiment.Port = arg.Description.Port
+	experiment.QosPublisher = arg.Description.QosPublisher
+	experiment.QosSubscriber = arg.Description.QosSubscriber
+	experiment.RampDown = arg.Description.RampDown
+	experiment.RampUp = arg.Description.RampUp
+	experiment.Retain = arg.Description.Retain
+	experiment.SharedSubscrition = arg.Description.SharedSubscrition
+	experiment.SubscriberTimeout = arg.Description.SubscriberTimeout
+	experiment.TlsKeystore = arg.Description.TlsKeystore
+	experiment.TlsKeystorePassword = arg.Description.TlsKeystorePassword
+	experiment.TlsTrustsore = arg.Description.TlsTrustsore
+	experiment.TlsTruststorePassword = arg.Description.TlsTruststorePassword
+	experiment.Tool = arg.Description.Tool
+	experiment.Topic = arg.Description.Topic
+	experiment.User = arg.Description.User
+	
+	experiment.Attach(&cmd)
+
+	msg,err := json.Marshal(cmd)
+
+	if err != nil{
+		log.Fatal(err.Error())
+	}
 
 	if arg.Id[0] == -1 {
 		for i := 0; i < len(workers); i++ {
@@ -194,12 +236,12 @@ func startExperiment(session *messages.Session, arg messages.Start) {
 				continue
 			}
 
-			workers[i].Historic.Add(expid, cmd, attemps)
+			workers[i].Historic.Add(expid, cmd, arg.Description.Attempts)
 
 			token := client.Publish(workers[i].Id+"/Command", byte(1), false, msg)
 			token.Wait()
 
-			go receiveControl(i, exec_t*5)
+			go receiveControl(i, arg.Description.Exec_time*5)
 
 			log.Printf("Requesting experiment in worker %d\n", i)
 		}
@@ -216,12 +258,12 @@ func startExperiment(session *messages.Session, arg messages.Start) {
 				}
 			}
 
-			workers[i].Historic.Add(expid, cmd, attemps)
+			workers[i].Historic.Add(expid, cmd, arg.Description.Attempts)
 
 			token := client.Publish(workers[arg.Id[i]].Id+"/Command", byte(1), false, msg)
 			token.Wait()
 
-			go receiveControl(arg.Id[i], exec_t*5)
+			go receiveControl(arg.Id[i], arg.Description.Exec_time*5)
 
 			log.Printf("Requesting experiment in worker %d\n", arg.Id[i])
 		}
