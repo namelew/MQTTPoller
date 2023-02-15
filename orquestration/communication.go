@@ -2,7 +2,6 @@ package orquestration
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -28,12 +27,7 @@ func GetWorkers() []messages.Worker {
 	return workers
 }
 
-func Init() error{
-	var (
-		broker     = flag.String("broker", "tcp://localhost:1883", "broker url to worker/orquestrator communication")
-		t_interval = flag.Int("tl", 5, "orquestrator tolerance interval")
-	)
-	flag.Parse()
+func Init(broker string, t_interval int) error{
 	var currentSession messages.Session
 	currentSession.Finish = true
 	var clientID string = "Orquestrator"
@@ -54,7 +48,7 @@ func Init() error{
 	}
 
 	opts := mqtt.NewClientOptions().
-		AddBroker(*broker).
+		AddBroker(broker).
 		SetClientID(clientID).
 		SetCleanSession(true).
 		SetAutoReconnect(true).
@@ -170,10 +164,10 @@ func Init() error{
 		}
 		if workers[id].TestPing {
 			workers[id].TestPing = false
-			go watcher(id, *t_interval)
+			go watcher(id, t_interval)
 		} else {
 			workers[id].TestPing = true
-			go watcher(id, *t_interval)
+			go watcher(id, t_interval)
 			workers[id].TestPing = false
 		}
 	})
