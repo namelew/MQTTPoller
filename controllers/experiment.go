@@ -20,7 +20,11 @@ func StartExperiment(c echo.Context) error {
 		return err
 	}
 
-	response := orquestration.StartExperiment(request)
+	response,err := orquestration.StartExperiment(request)
+
+	if err != nil {
+		return err
+	}
 
 	return c.JSON(200,response)
 }
@@ -38,7 +42,11 @@ func CancelExperiment(c echo.Context) error {
 		return err
 	}
 
-	orquestration.CancelExperiment(id, int64(expid))
+	err = orquestration.CancelExperiment(id, int64(expid))
+
+	if err != nil {
+		return err
+	}
 
 	return c.JSON(200, nil)
 }

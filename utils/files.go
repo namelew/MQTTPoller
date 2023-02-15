@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 
 	"github.com/namelew/mqtt-bm-latency/messages"
@@ -24,14 +25,22 @@ func GetJsonFromFile(file string, expid int64) (string, int, messages.Command, i
 
 	var exec_time int
 	var attemps int
-	data, _ := os.ReadFile(file)
+	data, err := os.ReadFile(file)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	var temp messages.Command
 	var jsonArg messages.CommandExperiment
 
 	json.Unmarshal(data, &temp)
 
-	data, _ = json.Marshal(temp.Arguments)
+	data, err = json.Marshal(temp.Arguments)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	json.Unmarshal(data, &jsonArg)
 
@@ -39,11 +48,19 @@ func GetJsonFromFile(file string, expid int64) (string, int, messages.Command, i
 	exec_time = jsonArg.ExecTime
 	attemps = jsonArg.Attempts
 
-	data, _ = json.Marshal(jsonArg)
+	data, err = json.Marshal(jsonArg)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	json.Unmarshal(data, &temp.Arguments)
 
-	data, _ = json.Marshal(temp)
+	data, err = json.Marshal(temp)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	return string(data), exec_time, temp, attemps
 }

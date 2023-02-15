@@ -28,7 +28,7 @@ func GetWorkers() []messages.Worker {
 	return workers
 }
 
-func Init() {
+func Init() error{
 	var (
 		broker     = flag.String("broker", "tcp://localhost:1883", "broker url to worker/orquestrator communication")
 		t_interval = flag.Int("tl", 5, "orquestrator tolerance interval")
@@ -37,10 +37,17 @@ func Init() {
 	var currentSession messages.Session
 	currentSession.Finish = true
 	var clientID string = "Orquestrator"
-	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
+	ka, err := time.ParseDuration(strconv.Itoa(10000) + "s")
+
+	if err != nil {
+		return err
+	}
 
 	if !utils.FileExists("orquestrator.log") {
-		f, _ := os.Create("orquestrator.log")
+		f, err := os.Create("orquestrator.log")
+		if err != nil {
+			return err
+		}
 		f.Close()
 	} else {
 		os.Truncate("orquestrator.log", 0)
@@ -57,7 +64,10 @@ func Init() {
 
 	client = mqtt.NewClient(opts)
 
-	f, _ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
 	f.WriteString("connect mqtt.client\n")
 	f.Close()
 
@@ -68,7 +78,7 @@ func Init() {
 	token := client.Subscribe("Orquestrator/Sessions", byte(1), func(c mqtt.Client, m mqtt.Message) {
 		err := json.Unmarshal(m.Payload(), &currentSession)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Fatal(err.Error())
 		}
 	})
 	token.Wait()
@@ -87,7 +97,10 @@ func Init() {
 			clientID += fmt.Sprintf("%d", random.Int()%10)
 		}
 
-		f, _ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
 		f.WriteString("worker " + clientID + " register\n")
 		f.Close()
 
@@ -110,7 +123,10 @@ func Init() {
 	token.Wait()
 
 	token = client.Subscribe("Orquestrator/Login", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		f, _ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 		f.WriteString("worker " + string(m.Payload()) + " login\n")
 		f.Close()
 		if !utils.IsIn(workers, string(m.Payload())) {
@@ -163,16 +179,26 @@ func Init() {
 	})
 
 	token.Wait()
+
+	return nil
 }
 
-func End() {
-	f, _ := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+func End() error{
+	f, err := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		client.Disconnect(0)
+		return err
+	}
 	f.WriteString("disconnect mqtt.client\n")
 
 	client.Disconnect(0)
 
 	f.WriteString("shutdown")
-	f.Close()
+
+	defer f.Close()
+	
+	return nil
 }
 
 func setMessageHandler(id int) {
@@ -186,7 +212,7 @@ func setMessageHandler(id int) {
 	token.Wait()
 }
 
-func StartExperiment(arg input.Start) ([]output.ExperimentResult){
+func StartExperiment(arg input.Start) ([]output.ExperimentResult, error){
 	expid := time.Now().Unix()
 	rexp = nil
 	var cmd messages.Command
@@ -225,12 +251,16 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult){
 	experiment.Topic = arg.Description.Topic
 	experiment.User = arg.Description.User
 	
-	experiment.Attach(&cmd)
+	err := experiment.Attach(&cmd)
+
+	if err != nil{
+		return rexp, err
+	}
 
 	msg,err := json.Marshal(cmd)
 
 	if err != nil{
-		log.Fatal(err.Error())
+		return rexp, err
 	}
 
 	if arg.Id[0] == -1 {
@@ -278,14 +308,18 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult){
 
 	expWG.Wait()
 
-	return rexp
+	return rexp,nil
 }
 
-func CancelExperiment(id int, expid int64) {
+func CancelExperiment(id int, expid int64) error{
 	arg := make(map[string]interface{})
 	arg["id"] = expid
 	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: arg}
-	msg, _ := json.Marshal(cmd)
+	msg, err := json.Marshal(cmd)
+
+	if err != nil {
+		return err
+	}
 
 	token := client.Publish(workers[id].Id+"/Command", byte(1), false, msg)
 	token.Wait()
@@ -293,9 +327,11 @@ func CancelExperiment(id int, expid int64) {
 	workers[id].ReceiveConfirmation = true
 	exp := workers[id].Historic.Search(expid)
 	exp.Finished = true
+
+	return nil
 }
 
-func GetInfo(arg input.Info) []output.Info{
+func GetInfo(arg input.Info) ([]output.Info, error){
 	var infoCommand messages.Command
 	infos = nil
 
@@ -303,7 +339,11 @@ func GetInfo(arg input.Info) []output.Info{
 	infoCommand.CommandType = "command moderation"
 	infoCommand.Arguments = map[string]interface{}{"cpuDisplay": arg.CpuDisplay, "discDisplay": arg.DiscDisplay, "memoryDisplay": arg.MemoryDisplay}
 
-	msg, _ := json.Marshal(&infoCommand)
+	msg, err := json.Marshal(&infoCommand)
+
+	if err != nil {
+		return infos, err
+	}
 
 	if arg.Id[0] == -1 {
 		for i := 0; i < len(workers); i++ {
@@ -369,5 +409,5 @@ func GetInfo(arg input.Info) []output.Info{
 		}
 	}
 
-	return infos
+	return infos,nil
 }

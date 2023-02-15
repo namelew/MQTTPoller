@@ -86,7 +86,11 @@ func GetInfo(c echo.Context) error {
 		return err
 	}
 
-	reponse := orquestration.GetInfo(request)
+	reponse,err := orquestration.GetInfo(request)
+
+	if err != nil {
+		return err
+	}
 
 	return c.JSON(200,reponse)
 }

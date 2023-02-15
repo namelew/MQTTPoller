@@ -74,12 +74,18 @@ func (cmd *Command) ToCommandExperiment() *CommandExperiment {
 	return &cExp
 }
 
-func (cmdExp *CommandExperiment) Attach(cmd *Command) {
+func (cmdExp *CommandExperiment) Attach(cmd *Command) error{
 	data, err := json.Marshal(cmdExp)
 
 	if err != nil {
-		return
+		return err
 	}
 
-	json.Unmarshal(data, &cmd.Arguments)
+	err = json.Unmarshal(data, &cmd.Arguments)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

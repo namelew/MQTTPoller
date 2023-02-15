@@ -1,13 +1,19 @@
 package main
 
 import (
+	"log"
+
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/controllers"
 	"github.com/namelew/mqtt-bm-latency/orquestration"
 )
 
 func main() {
-	orquestration.Init()
+	err := orquestration.Init()
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	api := echo.New()
 	api.GET("/orquestrator/worker", controllers.GetWorker)
@@ -16,5 +22,9 @@ func main() {
 	api.DELETE("/orquestrator/experiment/cancel/:id/:expid", controllers.CancelExperiment)
 	api.Logger.Fatal(api.Start(":8080"))
 
-	orquestration.End()
+	err = orquestration.End()
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }

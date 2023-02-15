@@ -50,7 +50,7 @@ func redoExperiment(worker int, experiment *messages.ExperimentLog) {
 	exp := *experiment
 	workers[worker].Historic.Remove(experiment.Id)
 
-	if len(workers) == 1 {
+	if len(workers) <= 1 {
 		return
 	}
 
@@ -75,7 +75,11 @@ func redoExperiment(worker int, experiment *messages.ExperimentLog) {
 
 		nw := sample[rand.Intn(len(sample))]
 
-		msg, _ := json.Marshal(exp.Cmd)
+		msg, err := json.Marshal(exp.Cmd)
+
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 
 		workers[nw].Historic.Add(exp.Id, exp.Cmd, exp.Attempts)
 
