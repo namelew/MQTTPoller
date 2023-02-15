@@ -20,6 +20,9 @@ import (
 var workers = make([]messages.Worker, 1, 10)
 var infos = make([]output.Info, 0, 10)
 var rexp []output.ExperimentResult
+var rexpMutex sync.Mutex
+var waitQueueMutex sync.Mutex
+var waitQueue []output.ExperimentResult
 var expWG sync.WaitGroup
 var client mqtt.Client
 
@@ -208,7 +211,18 @@ func setMessageHandler(id int) {
 
 func StartExperiment(arg input.Start) ([]output.ExperimentResult, error){
 	expid := time.Now().Unix()
+	
+	rexpMutex.Lock()
 	rexp = nil
+
+	waitQueueMutex.Lock()
+	rexp = append(rexp, waitQueue...)
+	rexpMutex.Unlock()
+
+	waitQueue = nil
+	waitQueueMutex.Unlock()
+
+
 	var cmd messages.Command
 	var experiment messages.CommandExperiment
 

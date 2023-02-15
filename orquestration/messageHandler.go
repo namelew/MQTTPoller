@@ -2,7 +2,6 @@ package orquestration
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
@@ -40,25 +39,26 @@ func messageHandlerExperimentStatus(msg mqtt.Message, id int) {
 func messageHandlerExperiment(m mqtt.Message, id int) {
 	var output output.ExperimentResult
 
-	worker := workers[id].Historic.FindLarger()
-
-	if worker != nil {
-		worker.Finished = true
-	}
-
 	err := json.Unmarshal(m.Payload(), &output)
 
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	rexp = append(rexp, output)
+	worker := workers[id].Historic.FindLarger()
 
-	if output.Meta.LogFile.Name != "" {
-		ioutil.WriteFile(workers[id].Id+output.Meta.LogFile.Name, output.Meta.LogFile.Data, 0644)
+	if worker == nil {
+		waitQueueMutex.Lock()
+		waitQueue = append(waitQueue, output)
+		waitQueueMutex.Unlock()
+	} else {
+		worker.Finished = true
+
+		rexpMutex.Lock()
+		rexp = append(rexp, output)
+		rexpMutex.Unlock()
+		workers[id].ReceiveConfirmation = true
 	}
-
-	workers[id].ReceiveConfirmation = true
 
 	log.Printf("Experiment %d in worker %d return\n", output.Meta.ID, id)
 }

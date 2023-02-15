@@ -70,7 +70,7 @@ func redoExperiment(worker int, experiment *messages.ExperimentLog) {
 		exp.Id = time.Now().Unix()
 		cmdExp.Expid = exp.Id
 		cmdExp.Attempts = exp.Attempts
-		timeout = cmdExp.ExecTime * 5
+		timeout = cmdExp.ExecTime * 5 * 2
 		cmdExp.Attach(&exp.Cmd)
 
 		nw := sample[rand.Intn(len(sample))]
