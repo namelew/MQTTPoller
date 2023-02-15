@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -19,6 +20,8 @@ import (
 
 var workers = make([]messages.Worker, 1, 10)
 var infos = make([]output.Info, 0, 10)
+var rexp []output.ExperimentResult
+var expWG sync.WaitGroup
 var client mqtt.Client
 
 func GetWorkers() []messages.Worker {
@@ -182,9 +185,10 @@ func setMessageHandler(id int) {
 	})
 	token.Wait()
 }
-
-func startExperiment(session *messages.Session, arg input.Start) {
+// argumentos estão chegando corretamente mas continua dando erro
+func StartExperiment(arg input.Start) ([]output.ExperimentResult){
 	expid := time.Now().Unix()
+	rexp = nil
 	var cmd messages.Command
 	var experiment messages.CommandExperiment
 
@@ -194,7 +198,7 @@ func startExperiment(session *messages.Session, arg input.Start) {
 	experiment.Expid = expid
 	experiment.Attempts = arg.Description.Attempts
 	experiment.Broker = arg.Description.Broker
-	experiment.Exec_time = arg.Description.Exec_time
+	experiment.ExecTime = arg.Description.ExecTime
 	experiment.Interval = arg.Description.Interval
 	experiment.LogLevel = arg.Description.LogLevel
 	experiment.MqttVersion = arg.Description.MqttVersion
@@ -230,7 +234,9 @@ func startExperiment(session *messages.Session, arg input.Start) {
 	}
 
 	if arg.Id[0] == -1 {
-		for i := 0; i < len(workers); i++ {
+		nw := len(workers)
+		expWG.Add(nw)
+		for i := 0; i < nw; i++ {
 			if !workers[i].Status {
 				log.Printf("Worker %d is off, skipping\n", i)
 				continue
@@ -241,12 +247,13 @@ func startExperiment(session *messages.Session, arg input.Start) {
 			token := client.Publish(workers[i].Id+"/Command", byte(1), false, msg)
 			token.Wait()
 
-			go receiveControl(i, arg.Description.Exec_time*5)
+			go receiveControl(i, arg.Description.ExecTime*5)
 
 			log.Printf("Requesting experiment in worker %d\n", i)
 		}
 	} else {
 		argTam := len(arg.Id)
+		expWG.Add(argTam)
 		for i := 0; i < argTam; i++ {
 			if !workers[arg.Id[i]].Status {
 				if argTam > 1 {
@@ -263,11 +270,15 @@ func startExperiment(session *messages.Session, arg input.Start) {
 			token := client.Publish(workers[arg.Id[i]].Id+"/Command", byte(1), false, msg)
 			token.Wait()
 
-			go receiveControl(arg.Id[i], arg.Description.Exec_time*5)
+			go receiveControl(arg.Id[i], arg.Description.ExecTime*5)
 
 			log.Printf("Requesting experiment in worker %d\n", arg.Id[i])
 		}
 	}
+
+	expWG.Wait()
+
+	return rexp
 }
 
 func cancelExperiment(id int, expid int64) {

@@ -36,7 +36,7 @@ func GetJsonFromFile(file string, expid int64) (string, int, messages.Command, i
 	json.Unmarshal(data, &jsonArg)
 
 	jsonArg.Expid = expid
-	exec_time = jsonArg.Exec_time
+	exec_time = jsonArg.ExecTime
 	attemps = jsonArg.Attempts
 
 	data, _ = json.Marshal(jsonArg)

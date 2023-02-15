@@ -46,13 +46,19 @@ func messageHandlerExperiment(m mqtt.Message, id int) {
 		worker.Finished = true
 	}
 
-	workers[id].ReceiveConfirmation = true
+	err := json.Unmarshal(m.Payload(), &output)
 
-	json.Unmarshal(m.Payload(), &output)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	rexp = append(rexp, output)
 
 	if output.Meta.LogFile.Name != "" {
 		ioutil.WriteFile(workers[id].Id+output.Meta.LogFile.Name, output.Meta.LogFile.Data, 0644)
 	}
+
+	workers[id].ReceiveConfirmation = true
 
 	log.Printf("Experiment %d in worker %d return\n", output.Meta.ID, id)
 }

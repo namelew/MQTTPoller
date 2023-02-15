@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/input"
@@ -92,7 +93,18 @@ func getInfo(c echo.Context) error {
 }
 
 func startExperiment(c echo.Context) error {
-	return nil
+	var request input.Start
+
+	err := json.NewDecoder(c.Request().Body).Decode(&request)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	response := orquestration.StartExperiment(request)
+
+	return c.JSON(200,response)
 }
 
 func main() {

@@ -6,6 +6,7 @@ import (
 
 type CommandExperiment struct {
 	Expid                int64 `json:"expid"`
+	Attempts             int    `json:"attempts"`
 	Tool                 string `json:"tool"`
 	Broker               string `json:"broker"`
 	Port                 int `json:"broker_port"`
@@ -23,7 +24,7 @@ type CommandExperiment struct {
 	RampDown             int `json:"ramp_down"`
 	Interval             int `json:"interval"`
 	SubscriberTimeout    int `json:"subscriber_timeout"`
-	Exec_time            int `json:"exec_time"`
+	ExecTime            int `json:"exec_time"`
 	LogLevel             string `json:"log_level"`
 	Ntp                  string `json:"ntp"`
 	Output               bool `json:"output"`

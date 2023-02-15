@@ -13,7 +13,6 @@ import (
 func receiveControl(id int, timeout int) {
 	var start int64 = time.Now().UnixMilli()
 	exlog := workers[id].Historic.FindLarger()
-
 	for utils.AbsInt(int(time.Now().UnixMilli()-start)) < (timeout * 1000) {
 		if workers[id].ReceiveConfirmation || !workers[id].Status || exlog.Err {
 			break
@@ -21,6 +20,7 @@ func receiveControl(id int, timeout int) {
 	}
 
 	workers[id].ReceiveConfirmation = false
+	expWG.Done()
 
 	if (timeout*1000) <= utils.AbsInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || exlog.Err {
 		log.Printf("Error in worker %d: experiment don't return\n", id)
@@ -70,7 +70,7 @@ func redoExperiment(worker int, experiment *messages.ExperimentLog) {
 		exp.Id = time.Now().Unix()
 		cmdExp.Expid = exp.Id
 		cmdExp.Attempts = exp.Attempts
-		timeout = cmdExp.Exec_time * 5
+		timeout = cmdExp.ExecTime * 5
 		cmdExp.Attach(&exp.Cmd)
 
 		nw := sample[rand.Intn(len(sample))]
