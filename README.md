@@ -30,33 +30,127 @@ Para iniciar o orquestrador execute o binário orquestrator, que será gerado no
 |:-----|:--------------|:------------|
 | tl | 5 | tempo de tolerância para batidas de coração dos workers|
 | broker | `tcp://localhost:1883` | Communication broker to worker - orquestrator relation|
+| adress |  | Endereço da api na rede|
+| port | `8000` | Porta tcp de comunicação da api do orquestrador|
 
-Após isso, abrirá um shell interativo de controle para a ferramenta. Ele aceita, quatro commandos diferentes:
-| Command | Description |
-|:-----|:------------|
-| ls | lista todos os workers cadastrados durante a sessão atual|
-| start | Inicia experimentos em 1 ou mais worker|
-| info  | Recuperação informações de hardware e do sistema operacional de um ou mais workers |
-| cancel | Cancela um experimento em execução em um worker|
+Ao iniciar, ele ficará escutando requisições http na porta escolhida e executará comandos baseado na rota escolhida
 
-### Exemplos
-* Listando workers cadastrados
+## Rotas
+### Descrição
+| Route | Method | Description |
+|:-----|:--------------|:------------|
+| `/orquestrator/worker` | GET | Retorna todos os workers conhecidos, seus estados e o experimento que estão executando |
+| `/orquestrator/info` | GET | Retorna informações sobre o máquina onde o worker está executando|
+| `/orquestrator/experiment/start` | POST | Executa um experimento em um ou mais workers selecionados|
+| `/orquestrator/experiment/cancel/:id/:expid` | DELETE | Cancela um experimento de id `expid` que está executando num worker `id`|
+### Mensagens
+#### /orquestrator/worker
+* request
 ```
-ls
+{
+    "wid": id | [ids] | null
+}
 ```
-* Listando experimentos realizados pelo worker 0
+* response
 ```
-ls -i 0
+[
+    {
+        "Id": int,
+        "NetId": string
+        "Online": bool
+        "History": [
+            {
+                "Command": description
+                "Finished": bool
+                "Id": int
+            },
+            ...
+        ]
+    },
+    ...
+]
 ```
-* Disparando um experimento em todos os workers
+#### /orquestrator/info
+* request
 ```
-start
+{
+    "Id": [ids],
+    "MemoryDisplay": bool,
+    "CpuDisplay": bool,
+    "DiscDisplay": bool
+}
 ```
-* Disparando experimento no worker 0 com arquivo de configuração command.json
+* response
 ```
-start -i 0 -f examples/command.json
+[
+    {
+        "Id": int,
+        "NetId": string,
+        "Infos": {
+            "Cpu": cpu description string,
+            "Ram": total ram int,
+            "Disk": total disk int
+        }
+    },
+    ...
+]
 ```
-* Cancelando experimento de id 1000000 no worker 0
+#### /orquestrator/experiment/start
+* request
 ```
-cancel 0 1000000
+{
+    "id": [ids],
+    "description":{
+        "tool":	tool string name,
+        "broker":	broker ip/dns,
+        "attempts": int,
+        "port":	broker port,
+        "mqttVersion":	3|5,
+        "numPublishers": int,
+        "numSubscribers":	int,
+        "qosPublisher":	0|1|2,
+        "qosSubscriber":	0|1|2,
+        "sharedSubscription":	bool,
+        "retain":	bool,
+        "topic":	topic name,
+        "payload":	message size,
+        "numMessages":	int,
+        "ramUp":	ramp up time,
+        "rampDown": ramp down time,
+        "interval":	interval beetwen messages,
+        "subscriberTimeout": int second,
+        "execTime":	int second,
+        "logLevel":	"INFO"|"SEVERE"|"WARNING"|"ALL",
+        "ntp": ntp server adress,
+        "output": get output file bool,
+        "username": mqtt client username string,
+        "password": mqtt client password string,
+        "tlsTruststore": string file path,
+        "tlsTruststorePass": string key file path,
+        "tlsKeystore": string file path,
+        "tlsKeystorePass": string key file path
+    },
+    "exeMode":unused attribute
+}
+```
+* response
+```
+[
+    {
+        "meta": meta object
+        "publish": publishers result object
+        "subscribe": subscribers result object
+    },
+    ...
+]
+```
+#### /orquestrator/experiment/cancel/:id/:expid
+* request
+```
+    vars in url
+```
+* response
+```
+    request status code
+    null | error
 ```
