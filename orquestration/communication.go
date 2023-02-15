@@ -185,7 +185,7 @@ func setMessageHandler(id int) {
 	})
 	token.Wait()
 }
-// argumentos estão chegando corretamente mas continua dando erro
+
 func StartExperiment(arg input.Start) ([]output.ExperimentResult){
 	expid := time.Now().Unix()
 	rexp = nil
@@ -281,7 +281,7 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult){
 	return rexp
 }
 
-func cancelExperiment(id int, expid int64) {
+func CancelExperiment(id int, expid int64) {
 	arg := make(map[string]interface{})
 	arg["id"] = expid
 	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: arg}

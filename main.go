@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/input"
@@ -107,6 +108,24 @@ func startExperiment(c echo.Context) error {
 	return c.JSON(200,response)
 }
 
+func cancelExperiment(c echo.Context) error {
+	id,err := strconv.Atoi(c.Param("id"))
+
+	if err != nil {
+		return err
+	}
+
+	expid,err := strconv.Atoi(c.Param("expid"))
+
+	if err != nil {
+		return err
+	}
+
+	orquestration.CancelExperiment(id, int64(expid))
+
+	return c.JSON(200, nil)
+}
+
 func main() {
 	orquestration.Init()
 
@@ -114,7 +133,7 @@ func main() {
 	api.GET("/orquestrator/worker", getWorker)
 	api.GET("/orquestrator/info", getInfo)
 	api.POST("/orquestrator/experiment/start", startExperiment)
-	api.POST("/orquestrator/experiment/cancel", nil)
+	api.DELETE("/orquestrator/experiment/cancel/:id/:expid", cancelExperiment)
 	api.Logger.Fatal(api.Start(":8080"))
 
 	orquestration.End()
