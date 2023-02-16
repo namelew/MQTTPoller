@@ -16,7 +16,7 @@ services:
      - example_experiment_network
     environment:
       - tolerance=5
-      - broker=tcp://mosquitto_broker:1883
+      - broker=mosquitto_broker
     depends_on:
       - broker
   workers:
@@ -25,7 +25,7 @@ services:
     networks:
      - example_experiment_network
     environment:
-      - broker=tcp://mosquitto_broker:1883
+      - broker=mosquitto_broker
       - login_t=30
       - timeout=5
       - tool=source/tools/mqttloader/bin/mqttloader
