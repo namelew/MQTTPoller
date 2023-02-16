@@ -4,5 +4,6 @@ tools
 .vscode
 workers
 orquestrator
+examples
 dump
 *.log
