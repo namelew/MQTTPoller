@@ -173,7 +173,10 @@ func (node *ExperimentLog) findSmallest() *ExperimentLog {
 }
 
 func (tree *ExperimentHistory) FindLarger() *ExperimentLog {
-	return tree.root.findLarger()
+	if tree.root != nil {
+		return tree.root.findLarger()
+	}
+	return nil
 }
 
 func (node *ExperimentLog) findLarger() *ExperimentLog {
