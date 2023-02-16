@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"flag"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/controllers"
@@ -22,6 +25,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
+	c := make(chan os.Signal)
+
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		err = orquestration.End()
+
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		os.Exit(1)
+	}()
 
 	api := echo.New()
 	
