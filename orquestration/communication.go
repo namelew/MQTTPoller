@@ -214,14 +214,7 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult, error){
 	
 	rexpMutex.Lock()
 	rexp = nil
-
-	waitQueueMutex.Lock()
-	rexp = append(rexp, waitQueue...)
 	rexpMutex.Unlock()
-
-	waitQueue = nil
-	waitQueueMutex.Unlock()
-
 
 	var cmd messages.Command
 	var experiment messages.CommandExperiment
@@ -315,6 +308,14 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult, error){
 	}
 
 	expWG.Wait()
+
+	rexpMutex.Lock()
+	waitQueueMutex.Lock()
+	rexp = append(rexp, waitQueue...)
+	rexpMutex.Unlock()
+
+	waitQueue = nil
+	waitQueueMutex.Unlock()
 
 	return rexp,nil
 }
