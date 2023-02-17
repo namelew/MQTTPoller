@@ -1,6 +1,9 @@
 package utils
 
-import "os"
+import (
+	"log"
+	"os"
+)
 
 func FileExists(file string) bool{
 	_, err := os.Stat(file)
@@ -17,7 +20,11 @@ func GetJsonFromFile(file string) string{
 		return ""
 	}
 
-	data,_ := os.ReadFile(file)
+	data,err := os.ReadFile(file)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	return string(data)
 }

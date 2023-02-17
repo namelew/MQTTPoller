@@ -1,6 +1,9 @@
 package history
 
-import "os"
+import (
+	"os"
+	"github.com/namelew/mqtt-bm-latency/utils"
+)
 
 type OngoingExperiments struct{
 	root *OngoingExperiment
@@ -142,14 +145,7 @@ func (node *OngoingExperiment) getHeight() int {
 }
 
 func (node *OngoingExperiment) recalculateHeight() {
-	node.height = 1 + max(node.left.getHeight(), node.right.getHeight())
-}
-
-func max(a int, b int) int {
-	if a > b {
-		return a
-	}
-	return b
+	node.height = 1 + utils.Max(node.left.getHeight(), node.right.getHeight())
 }
 
 func (node *OngoingExperiment) findSmallest() *OngoingExperiment {
