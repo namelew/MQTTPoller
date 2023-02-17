@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,21 +11,22 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
-	"flag"
 	"sync"
+	"time"
 
 	"math/rand"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/namelew/mqtt-bm-latency/history"
+	"github.com/namelew/mqtt-bm-latency/messages"
+	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/cpu"
 )
 
 var logMutex sync.Mutex
 var experimentListMutex sync.Mutex
-var experimentList ongoingExperiments
+var experimentList history.OngoingExperiments
 
 func fileExists(file string) bool{
 	_, err := os.Stat(file)
@@ -47,7 +49,7 @@ func getJsonFromFile(file string) string{
 }
 
 func loadArguments(file string, arg map[string]interface{}) (bool, int64){
-	var arguments commandExperiment
+	var arguments messages.CommandExperiment
 	jsonObj,_ := json.Marshal(arg)
 	json.Unmarshal(jsonObj, &arguments)
 
@@ -98,8 +100,8 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64){
 	return arguments.Output,arguments.Expid
 }
 
-func extracExperimentResults(output string, createLog bool) experimentResult{
-	results:= experimentResult{}
+func extracExperimentResults(output string, createLog bool) messages.ExperimentResult{
+	results:= messages.ExperimentResult{}
 	results.Meta.Literal = output
 
 	temp := [12]string{}
@@ -188,7 +190,7 @@ func Ping(client mqtt.Client, m string){
 	t.Wait()
 }
 
-func Start(client mqtt.Client, clientID string, tool string, cmdExp command, commandLiteral string, experimentId int64){
+func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Command, commandLiteral string, experimentId int64){
 	var arg_file string = `"myconfig.conf"`
 	var flag string = "-c"
 	var createLogFile bool = false
@@ -225,7 +227,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp command, com
 
 	cmd := exec.Command("./"+tool, flag ,arg_file)
 
-	mess,_ := json.Marshal(status{fmt.Sprintf("Experiment Status %d", id), "start", cmdExp}) 
+	mess,_ := json.Marshal(messages.Status{fmt.Sprintf("Experiment Status %d", id), "start", cmdExp}) 
 	t := client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 	t.Wait()
 	var output bytes.Buffer
@@ -234,29 +236,29 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp command, com
 	cmd.Stderr = &stderr
 	err := cmd.Start()
 
-	experimentNode := ongoingExperiment{id, false, cmd.Process, 1,nil, nil}
+	experimentNode := history.CreateRegister(id, cmd.Process)
 
 	experimentListMutex.Lock()
-	experimentList.add(&experimentNode)
+	experimentList.Add(&experimentNode)
 	experimentListMutex.Unlock()
 
 	cmd.Wait()
 
 	experimentListMutex.Lock()
-	if experimentNode.finished{
-		experimentList.remove(id)
+	if experimentNode.Finished{
+		experimentList.Remove(id)
 		experimentListMutex.Unlock()
 		return
 	}
-	experimentList.remove(id)
+	experimentList.Remove(id)
 	experimentListMutex.Unlock()
 	
 	if err != nil{
-		mess,_ = json.Marshal(status{fmt.Sprintf("Experiment Status %d", id) , fmt.Sprint(err) + ": " + stderr.String(), command{}})
+		mess,_ = json.Marshal(messages.Status{fmt.Sprintf("Experiment Status %d", id) , fmt.Sprint(err) + ": " + stderr.String(), messages.Command{}})
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		mess,_ = json.Marshal(status{"Client Status", "offline " + err.Error(), command{}})
+		mess,_ = json.Marshal(messages.Status{"Client Status", "offline " + err.Error(), messages.Command{}})
 		t = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		t.Wait()
 
@@ -271,7 +273,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp command, com
 	resultsExperiment := extracExperimentResults(output.String(), createLogFile)
 
 	if resultsExperiment.Publish.AvgThroughput == 0{
-		mess,_ = json.Marshal(status{fmt.Sprintf("Experiment Status %d", id), "Error 10: Hardware Colapse", command{}})
+		mess,_ = json.Marshal(messages.Status{fmt.Sprintf("Experiment Status %d", id), "Error 10: Hardware Colapse", messages.Command{}})
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
@@ -281,7 +283,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp command, com
 		f.Close()
 		logMutex.Unlock()
 	} else {
-		mess,_ = json.Marshal(status{fmt.Sprintf("Experiment Status %d", id), "finish", command{}})
+		mess,_ = json.Marshal(messages.Status{fmt.Sprintf("Experiment Status %d", id), "finish", messages.Command{}})
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
@@ -302,8 +304,8 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp command, com
 	os.Remove("CommandsLog/experiment_"+fmt.Sprint(id)+".json")
 }
 
-func Info(client mqtt.Client, arguments info, isUnix bool, clientID string){
-	var result infoDisplay
+func Info(client mqtt.Client, arguments messages.Info, isUnix bool, clientID string){
+	var result messages.InfoDisplay
 
 	logMutex.Lock()
 	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -371,10 +373,10 @@ func redo(client mqtt.Client, clientID string, tool string, redoList []string){
 	for _,file := range redoList{
 		msg := getJsonFromFile("CommandsLog/experiment_"+file+".json")
 		if msg != ""{
-			var cmd command
+			var cmd messages.Command
 			err := json.Unmarshal([]byte(msg), &cmd)
 			if err != nil{
-				mess,_ := json.Marshal(status{"Client Status", "offline " + err.Error(), command{}})
+				mess,_ := json.Marshal(messages.Status{"Client Status", "offline " + err.Error(), messages.Command{}})
 				t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
 				t.Wait()
 				logMutex.Lock()
@@ -405,7 +407,7 @@ func main() {
 	var makeRegister bool = false
 	var login_confirmation bool = false
 	var register_confirmation bool = false
-	var currentSession session
+	var currentSession messages.Session
 
 	currentSession.Finish = true
 
@@ -456,7 +458,7 @@ func main() {
 		response := strings.Split(string(m.Payload()), "-")
 
 		if response[0] != clientID {
-			mess,_ := json.Marshal(status{"Client Status", "offline registration fail", command{}})
+			mess,_ := json.Marshal(messages.Status{"Client Status", "offline registration fail", messages.Command{}})
 			token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 			token.Wait()
 			client.Disconnect(0)
@@ -511,7 +513,7 @@ func main() {
 	}
 
 	if !login_confirmation{
-		mess,_ := json.Marshal(status{"Client Status", "offline login fail", command{}})
+		mess,_ := json.Marshal(messages.Status{"Client Status", "offline login fail", messages.Command{}})
 		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		client.Disconnect(0)
@@ -524,7 +526,7 @@ func main() {
 	}
 
 	if !register_confirmation{
-		mess,_ := json.Marshal(status{"Client Status", "offline registration fail", command{}})
+		mess,_ := json.Marshal(messages.Status{"Client Status", "offline registration fail", messages.Command{}})
 		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		client.Disconnect(0)
@@ -536,7 +538,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	mess,_ := json.Marshal(status{"Client Status", "online", command{}})
+	mess,_ := json.Marshal(messages.Status{"Client Status", "online", messages.Command{}})
 	token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 	token.Wait()
 
@@ -546,10 +548,10 @@ func main() {
 		}
 		message := m.Payload()
 
-		var commd command
+		var commd messages.Command
 		err := json.Unmarshal(message, &commd)
 		if err != nil {
-			mess,_ = json.Marshal(status{"Client Status", "offline " + err.Error(), command{}})
+			mess,_ = json.Marshal(messages.Status{"Client Status", "offline " + err.Error(), messages.Command{}})
 			t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
 			t.Wait()
 			logMutex.Lock()
@@ -562,7 +564,7 @@ func main() {
 
 		switch commd.Name{
 			case "info":
-				var arguments info
+				var arguments messages.Info
 				jsonObj,_ := json.Marshal(commd.Arguments)
 				json.Unmarshal(jsonObj, &arguments)
 
@@ -571,10 +573,10 @@ func main() {
 				go Start(client, clientID, *tool, commd, string(m.Payload()), -1)
 			case "cancel":
 				experimentListMutex.Lock()
-				node := experimentList.search(int64(commd.Arguments["id"].(float64)))
+				node := experimentList.Search(int64(commd.Arguments["id"].(float64)))
 				if node != nil{
-					node.finished = true
-					node.proc.Kill()
+					node.Finished = true
+					node.Proc.Kill()
 				}
 				experimentListMutex.Unlock()
 		}
@@ -610,7 +612,7 @@ func main() {
 
 	time.Sleep(time.Minute * time.Duration(*timeout))
 
-	mess,_ = json.Marshal(status{"Client Status", "offline", command{}})
+	mess,_ = json.Marshal(messages.Status{"Client messages.Status", "offline", messages.Command{}})
 	token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 	token.Wait()
 	client.Disconnect(0)

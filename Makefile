@@ -3,9 +3,8 @@ EXE=worker
 all: build
 
 build:
-	go mod init puppy
-	go build -o bin/$(EXE) -modfile source/go.mod source/main.go source/messages.go source/experimentControl.go
-	rm -f go.mod
+	go mod tidy
+	go build -o bin/$(EXE) main.go
 
 run: build
 	./bin/worker --timeout 50

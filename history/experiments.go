@@ -1,21 +1,25 @@
-package main
+package history
 
 import "os"
 
-type ongoingExperiments struct{
-	root *ongoingExperiment
+type OngoingExperiments struct{
+	root *OngoingExperiment
 }
 
-type ongoingExperiment struct{
-	id int64
-	finished bool
-	proc *os.Process
+type OngoingExperiment struct{
+	Id int64
+	Finished bool
+	Proc *os.Process
 	height int
-	right *ongoingExperiment 
-	left *ongoingExperiment
+	right *OngoingExperiment 
+	left *OngoingExperiment
 }
 
-func (tree *ongoingExperiments) add(node *ongoingExperiment){
+func CreateRegister(id int64, proc *os.Process) OngoingExperiment{
+	return OngoingExperiment{id, false, proc, 1, nil, nil}
+}
+
+func (tree *OngoingExperiments) Add(node *OngoingExperiment){
 	if tree.root == nil{
 		tree.root = node
 	} else{
@@ -24,8 +28,8 @@ func (tree *ongoingExperiments) add(node *ongoingExperiment){
 	tree.root = tree.root.rebalanceTree()
 }
 
-func (node *ongoingExperiment) add(newNode *ongoingExperiment){
-	if newNode.id <= node.id{
+func (node *OngoingExperiment) add(newNode *OngoingExperiment){
+	if newNode.Id <= node.Id{
 		if node.left == nil{
 			node.left = newNode
 		}else{
@@ -40,42 +44,42 @@ func (node *ongoingExperiment) add(newNode *ongoingExperiment){
 	}
 }
 
-func (tree *ongoingExperiments) remove(id int64){
+func (tree *OngoingExperiments) Remove(id int64){
 	tree.root  = tree.root.remove(id)
 }
 
-func (tree *ongoingExperiments) search(id int64) *ongoingExperiment{
+func (tree *OngoingExperiments) Search(id int64) *OngoingExperiment{
 	return tree.root.search(id)
 }
 
-func (node *ongoingExperiment) search(id int64) *ongoingExperiment{
+func (node *OngoingExperiment) search(id int64) *OngoingExperiment{
 	if node == nil {
 		return nil
 	}
-	if id < node.id {
+	if id < node.Id {
 		return node.left.search(id)
-	} else if id > node.id {
+	} else if id > node.Id {
 		return node.right.search(id)
 	} else {
 		return node
 	}
 }
 
-func (node *ongoingExperiment) remove(id int64) *ongoingExperiment {
+func (node *OngoingExperiment) remove(id int64) *OngoingExperiment {
 	if node == nil {
 		return nil
 	}
-	if id < node.id {
+	if id < node.Id {
 		node.left = node.left.remove(id)
-	} else if id > node.id {
+	} else if id > node.Id {
 		node.right = node.right.remove(id)
 	} else {
 		if node.left != nil && node.right != nil {
 			rightMinNode := node.right.findSmallest()
-			node.id = rightMinNode.id
-			node.finished = rightMinNode.finished
-			node.proc = rightMinNode.proc
-			node.right = node.right.remove(rightMinNode.id)
+			node.Id = rightMinNode.Id
+			node.Finished = rightMinNode.Finished
+			node.Proc = rightMinNode.Proc
+			node.right = node.right.remove(rightMinNode.Id)
 		} else if node.left != nil {
 			node = node.left
 		} else if node.right != nil {
@@ -89,7 +93,7 @@ func (node *ongoingExperiment) remove(id int64) *ongoingExperiment {
 	return node.rebalanceTree()
 }
 
-func (node *ongoingExperiment) rebalanceTree() *ongoingExperiment {
+func (node *OngoingExperiment) rebalanceTree() *OngoingExperiment {
 	if node == nil {
 		return node
 	}
@@ -110,7 +114,7 @@ func (node *ongoingExperiment) rebalanceTree() *ongoingExperiment {
 	return node
 }
 
-func (node *ongoingExperiment) rotateLeft() *ongoingExperiment {
+func (node *OngoingExperiment) rotateLeft() *OngoingExperiment {
 	newRoot := node.right
 	node.right = newRoot.left
 	newRoot.left = node
@@ -120,7 +124,7 @@ func (node *ongoingExperiment) rotateLeft() *ongoingExperiment {
 	return newRoot
 }
 
-func (node *ongoingExperiment) rotateRight() *ongoingExperiment {
+func (node *OngoingExperiment) rotateRight() *OngoingExperiment {
 	newRoot := node.left
 	node.left = newRoot.right
 	newRoot.right = node
@@ -130,14 +134,14 @@ func (node *ongoingExperiment) rotateRight() *ongoingExperiment {
 	return newRoot
 }
 
-func (node *ongoingExperiment) getHeight() int {
+func (node *OngoingExperiment) getHeight() int {
 	if node == nil {
 		return 0
 	}
 	return node.height
 }
 
-func (node *ongoingExperiment) recalculateHeight() {
+func (node *OngoingExperiment) recalculateHeight() {
 	node.height = 1 + max(node.left.getHeight(), node.right.getHeight())
 }
 
@@ -148,7 +152,7 @@ func max(a int, b int) int {
 	return b
 }
 
-func (node *ongoingExperiment) findSmallest() *ongoingExperiment {
+func (node *OngoingExperiment) findSmallest() *OngoingExperiment {
 	if node.left != nil {
 		return node.left.findSmallest()
 	} else {
