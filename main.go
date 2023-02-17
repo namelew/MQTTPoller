@@ -19,6 +19,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/history"
 	"github.com/namelew/mqtt-bm-latency/messages"
+	"github.com/namelew/mqtt-bm-latency/utils"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/mem"
@@ -27,26 +28,6 @@ import (
 var logMutex sync.Mutex
 var experimentListMutex sync.Mutex
 var experimentList history.OngoingExperiments
-
-func fileExists(file string) bool{
-	_, err := os.Stat(file)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-	return true
-}
-
-func getJsonFromFile(file string) string{
-	if !fileExists(file){
-		return ""
-	}
-
-	data,_ := os.ReadFile(file)
-
-	return string(data)
-}
 
 func loadArguments(file string, arg map[string]interface{}) (bool, int64){
 	var arguments messages.CommandExperiment
@@ -196,7 +177,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 	var createLogFile bool = false
 	var id int64
 
-	if(!fileExists("myconfig.conf")){
+	if(!utils.FileExists("myconfig.conf")){
 		file,_ := os.Create("myconfig.conf")
 		file.Close()
 	}
@@ -213,7 +194,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		id = experimentId
 	}
 
-	if !fileExists("CommandsLog/experiment_"+fmt.Sprint(id)+".json"){
+	if !utils.FileExists("CommandsLog/experiment_"+fmt.Sprint(id)+".json"){
 		file,_ :=os.Create("CommandsLog/experiment_"+fmt.Sprint(id)+".json")
 		file.Write([]byte(commandLiteral))
 		file.Close()
@@ -371,7 +352,7 @@ func getFailExperiements() []string{
 
 func redo(client mqtt.Client, clientID string, tool string, redoList []string){
 	for _,file := range redoList{
-		msg := getJsonFromFile("CommandsLog/experiment_"+file+".json")
+		msg := utils.GetJsonFromFile("CommandsLog/experiment_"+file+".json")
 		if msg != ""{
 			var cmd messages.Command
 			err := json.Unmarshal([]byte(msg), &cmd)
@@ -411,14 +392,14 @@ func main() {
 
 	currentSession.Finish = true
 
-	if !fileExists("worker.log"){
+	if !utils.FileExists("worker.log"){
 		f,_ := os.Create("worker.log")
 		f.Close()
 	} else{
 		os.Truncate("worker.log", 0)
 	}
 
-	if !fileExists("token.bin"){
+	if !utils.FileExists("token.bin"){
 		for i := 0; i < 10; i++{
 			seed = rand.NewSource(time.Now().UnixNano())
 			random = rand.New(seed)
@@ -473,7 +454,7 @@ func main() {
 
 		var f *os.File
 
-		if!fileExists("token.bin"){
+		if!utils.FileExists("token.bin"){
 			f,_ = os.Create("token.bin")
 		} else{
 			f,_ = os.Open("token.bin")
