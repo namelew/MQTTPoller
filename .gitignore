@@ -1,6 +1,5 @@
 *.conf
 worker
-/go.mod
 .vscode
 vendor
 worker.log
