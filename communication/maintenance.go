@@ -35,26 +35,34 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64){
 
 	var argf string = ""
 
-	isNull := func (param string) string{if param == ""{ return "#"}; return ""}
+	isNull := func (param interface{}) string{
+		switch param.(type) {
+		case string:
+			if param == ""{ return "#"}
+		case int:
+			if param == 0{ return "#"}
+		}
+		return ""
+	}
 
-	argf += fmt.Sprintf("broker=%s\n", arguments.Broker)
-	argf += fmt.Sprintf("broker_port=%d\n", arguments.Port)
-	argf += fmt.Sprintf("mqtt_version=%d\n", arguments.MqttVersion)
-	argf += fmt.Sprintf("num_publishers=%d\n", arguments.NumPublishers)
-	argf += fmt.Sprintf("num_subscribers=%d\n", arguments.NumSubscriber)
-	argf += fmt.Sprintf("qos_publisher=%d\n", arguments.QosPublisher)
-	argf += fmt.Sprintf("qos_subscriber=%d\n", arguments.QosSubscriber)
-	argf += fmt.Sprintf("shared_subscription=%t\n", arguments.SharedSubscrition)
-	argf += fmt.Sprintf("retain=%t\n", arguments.Retain)
-	argf += fmt.Sprintf("topic=%s\n", arguments.Topic)
-	argf += fmt.Sprintf("payload=%d\n", arguments.Payload)
-	argf += fmt.Sprintf("num_messages=%d\n", arguments.NumMessages)
-	argf += fmt.Sprintf("ramp_up=%d\n", arguments.RampUp)
-	argf += fmt.Sprintf("ramp_down=%d\n", arguments.RampDown)
-	argf += fmt.Sprintf("interval=%d\n", arguments.Interval)
-	argf += fmt.Sprintf("subscriber_timeout=%d\n", arguments.SubscriberTimeout)
-	argf += fmt.Sprintf("log_level=%s\n", arguments.LogLevel)
-	argf += fmt.Sprintf("exec_time=%d\n", arguments.Exec_time)
+	argf += fmt.Sprintf("%sbroker=%s\n", isNull(arguments.Broker), arguments.Broker)
+	argf += fmt.Sprintf("%sbroker_port=%d\n", isNull(arguments.Port), arguments.Port)
+	argf += fmt.Sprintf("%smqtt_version=%d\n", isNull(arguments.MqttVersion), arguments.MqttVersion)
+	argf += fmt.Sprintf("%snum_publishers=%d\n", isNull(arguments.NumPublishers), arguments.NumPublishers)
+	argf += fmt.Sprintf("%snum_subscribers=%d\n", isNull(arguments.NumSubscriber), arguments.NumSubscriber)
+	argf += fmt.Sprintf("%sqos_publisher=%d\n", isNull(arguments.QosPublisher), arguments.QosPublisher)
+	argf += fmt.Sprintf("%sqos_subscriber=%d\n", isNull(arguments.QosSubscriber), arguments.QosSubscriber)
+	argf += fmt.Sprintf("%sshared_subscription=%t\n", isNull(arguments.SharedSubscrition), arguments.SharedSubscrition)
+	argf += fmt.Sprintf("%sretain=%t\n", isNull(arguments.Retain), arguments.Retain)
+	argf += fmt.Sprintf("%stopic=%s\n", isNull(arguments.Topic),arguments.Topic)
+	argf += fmt.Sprintf("%spayload=%d\n", isNull(arguments.Payload), arguments.Payload)
+	argf += fmt.Sprintf("%snum_messages=%d\n", isNull(arguments.NumMessages), arguments.NumMessages)
+	argf += fmt.Sprintf("%sramp_up=%d\n", isNull(arguments.RampUp), arguments.RampUp)
+	argf += fmt.Sprintf("%sramp_down=%d\n", isNull(arguments.RampDown), arguments.RampDown)
+	argf += fmt.Sprintf("%sinterval=%d\n", isNull(arguments.Interval), arguments.Interval)
+	argf += fmt.Sprintf("%ssubscriber_timeout=%d\n", isNull(arguments.SubscriberTimeout), arguments.SubscriberTimeout)
+	argf += fmt.Sprintf("%slog_level=%s\n", isNull(arguments.LogLevel), arguments.LogLevel)
+	argf += fmt.Sprintf("%sexec_time=%d\n", isNull(arguments.Exec_time), arguments.Exec_time)
 	argf += fmt.Sprintf("%sntp=%s\n", isNull(arguments.Ntp),arguments.Ntp)
 	if arguments.Output {argf += fmt.Sprintf("output=%s\n", "output")}
 	argf += fmt.Sprintf("%suser_name=%s\n", isNull(arguments.User),arguments.User)
