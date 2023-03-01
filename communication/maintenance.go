@@ -163,62 +163,6 @@ func workerKeepAlive(client mqtt.Client, msg string){
 	}
 }
 
-func getFailExperiements() []string{
-	var temp []byte
-	var experiments []string
-	logMutex.Lock()
-	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-
-	f.Read(temp)
-
-	logData := strings.Split(string(temp), "\n")
-
-	f.Close()
-	logMutex.Unlock()
-
-	for i := 0; i < len(logData); i++{
-		line := strings.Split(logData[i], " ")
-		if line[0] == "start"{
-			finished := false
-			for j := i; j < len(logData); j++{
-				line2 := strings.Split(logData[j], " ")
-				if (line2[0] == "finish" || line2[0] == "error") && line[2] == line2[2]{
-					finished = true
-					break
-				}
-			}
-			if !finished{
-				experiments = append(experiments, line[2])
-			}
-		}
-	}
-
-	return experiments
-}
-
-func redo(client mqtt.Client, clientID string, tool string, redoList []string){
-	for _,file := range redoList{
-		msg := utils.GetJsonFromFile("CommandsLog/experiment_"+file+".json")
-		if msg != ""{
-			var cmd messages.Command
-			err := json.Unmarshal([]byte(msg), &cmd)
-			if err != nil{
-				mess,_ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline " + err.Error(), Attr: messages.Command{}})
-				t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
-				t.Wait()
-				logMutex.Lock()
-				f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-				f.WriteString("crash "+err.Error()+"\n")
-				f.Close()
-				logMutex.Unlock()
-				os.Exit(3)
-			}
-			id,_ := strconv.ParseInt(file, 10, 64)
-			go Start(client, clientID, tool, cmd, msg, id)
-		}		
-	}
-}
-
 func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 	var clientID string = "Client_"
 	var seed rand.Source
@@ -226,9 +170,6 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 	var makeRegister bool = false
 	var login_confirmation bool = false
 	var register_confirmation bool = false
-	var currentSession messages.Session
-
-	currentSession.Finish = true
 
 	if !utils.FileExists("worker.log"){
 		f,_ := os.Create("worker.log")
@@ -409,25 +350,7 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 
 	token.Wait()
 
-	token = client.Subscribe("Orquestrator/Sessions", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		json.Unmarshal(m.Payload(), &currentSession.Status)
-		temp := strings.Split(currentSession.Status.Status, " ") 
-		if temp[0] == "start"{
-			currentSession.Id,_ = strconv.Atoi(temp[2])
-			currentSession.Finish = false
-		}else{
-			currentSession.Finish = true
-			os.RemoveAll("CommandsLog")
-		}
-	})
-	token.Wait()
-
 	go workerKeepAlive(client, clientID)
-
-	if !currentSession.Finish{
-		redoList := getFailExperiements()
-		redo(client, clientID, tool, redoList)
-	}
 
 	c := make(chan os.Signal, 1)
 

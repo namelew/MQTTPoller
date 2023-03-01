@@ -6,12 +6,6 @@ type Status struct{
 	Attr Command `json:"attr"`
 }
 
-type Session struct{
-	Id int
-	Finish bool
-	Status Status
-}
-
 type Command struct{
 	Name string `json:"name"`
 	Type string `json:"type"`
