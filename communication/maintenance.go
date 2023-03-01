@@ -171,34 +171,44 @@ func workerKeepAlive(client mqtt.Client, msg string){
 	}
 }
 
-func Init(broker string, tool string,loginTimeout int, isUnix bool) {
-	var clientID string = "Client_"
-	var seed rand.Source
-	var random *rand.Rand
-	var makeRegister bool = false
-	var login_confirmation bool = false
-	var register_confirmation bool = false
-
+func createLog() {
 	if !utils.FileExists("worker.log"){
 		f,_ := os.Create("worker.log")
 		f.Close()
 	} else{
 		os.Truncate("worker.log", 0)
 	}
+}
+
+func getToken() (string,bool,bool,bool){
+	var seed rand.Source
+	var random *rand.Rand
+	var makeRegister bool
+	var login_confirmation bool
+	var register_confirmation bool
+	var token string = "Client_"
 
 	if !utils.FileExists("token.bin"){
 		for i := 0; i < 10; i++{
 			seed = rand.NewSource(time.Now().UnixNano())
 			random = rand.New(seed)
-			clientID += fmt.Sprintf("%d", random.Int() % 10)
+			token += fmt.Sprintf("%d", random.Int() % 10)
 		}
 		makeRegister = true
 		login_confirmation = true
 	} else{
 		data,_ := os.ReadFile("token.bin")
-		clientID = strings.Split(string(data), "\n")[0]
+		token = strings.Split(string(data), "\n")[0]
 		register_confirmation = true
 	}
+
+	return token,makeRegister,login_confirmation,register_confirmation
+}
+
+func Init(broker string, tool string,loginTimeout int, isUnix bool) {
+	createLog()
+
+	clientID,makeRegister,login_confirmation,register_confirmation := getToken()
 
 	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
 
