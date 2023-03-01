@@ -205,28 +205,7 @@ func getToken() (string,bool,bool,bool){
 	return token,makeRegister,login_confirmation,register_confirmation
 }
 
-func Init(broker string, tool string,loginTimeout int, isUnix bool) {
-	createLog()
-
-	clientID,makeRegister,login_confirmation,register_confirmation := getToken()
-
-	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
-
-	opts := mqtt.NewClientOptions().
-			AddBroker(broker).
-			SetClientID(clientID).
-			SetCleanSession(true).
-			SetAutoReconnect(true).
-			SetKeepAlive(ka).
-			SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {}).
-			SetConnectionLostHandler(func(client mqtt.Client, reason error) {})
-	
-	client := mqtt.NewClient(opts)
-
-	tokenConnection := client.Connect()
-
-	tokenConnection.Wait()
-
+func authentication(client mqtt.Client, clientID string, loginTimeout int, makeRegister bool, login_confirmation bool, register_confirmation bool) {
 	token := client.Subscribe(clientID+"/Login/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
 		login_confirmation = true
 	})
@@ -315,9 +294,34 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 		logMutex.Unlock()
 		os.Exit(0)
 	}
+}
+
+func Init(broker string, tool string,loginTimeout int, isUnix bool) {
+	createLog()
+
+	clientID,makeRegister,login_confirmation,register_confirmation := getToken()
+
+	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
+
+	opts := mqtt.NewClientOptions().
+			AddBroker(broker).
+			SetClientID(clientID).
+			SetCleanSession(true).
+			SetAutoReconnect(true).
+			SetKeepAlive(ka).
+			SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {}).
+			SetConnectionLostHandler(func(client mqtt.Client, reason error) {})
+	
+	client := mqtt.NewClient(opts)
+
+	tokenConnection := client.Connect()
+
+	tokenConnection.Wait()
+
+	authentication(client, clientID, loginTimeout, makeRegister, login_confirmation, register_confirmation)
 
 	mess,_ := json.Marshal(messages.Status{Type: "Client Status", Status: "online", Attr: messages.Command{}})
-	token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
+	token := client.Publish(clientID+"/Status", byte(1), true, string(mess))
 	token.Wait()
 
 	token = client.Subscribe(clientID+"/Command", byte(1), func(c mqtt.Client, m mqtt.Message) {
