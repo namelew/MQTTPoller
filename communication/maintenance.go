@@ -76,10 +76,7 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64){
     byteSlice := []byte(argf)
     _, err := f.Write(byteSlice)
     if err != nil {
-		logMutex.Lock()
-		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("crash "+err.Error()+"\n")
-		logMutex.Unlock()
+		registerLog("load arguments error "+err.Error())
 		f.Close()
     }
 
@@ -129,11 +126,7 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 
 		err := filepath.Walk("output", func(path string, info os.FileInfo, err error) error {
 			if err != nil{
-				logMutex.Lock()
-				f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-				f.WriteString("extract failure "+err.Error()+"\n")
-				f.Close()
-				logMutex.Unlock()
+				registerLog("extract failure "+err.Error())
 				return nil
 			}
 
@@ -180,6 +173,14 @@ func createLog() {
 	}
 }
 
+func registerLog(msg string) {
+	logMutex.Lock()
+	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f.WriteString(msg + "\n")
+	f.Close()
+	logMutex.Unlock()
+}
+
 func getToken() (string,bool,bool,bool){
 	var seed rand.Source
 	var random *rand.Rand
@@ -219,11 +220,7 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 			token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 			token.Wait()
 			client.Disconnect(0)
-			logMutex.Lock()
-			f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString("shutdown register failure\n")
-			f.Close()
-			logMutex.Unlock()
+			registerLog("shutdown register failure")
 			os.Exit(0)
 			return
 		}
@@ -274,11 +271,7 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		client.Disconnect(0)
-		logMutex.Lock()
-		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("shutdown login failure\n")
-		f.Close()
-		logMutex.Unlock()
+		registerLog("shutdown login failure")
 		os.Exit(0)
 	}
 
@@ -287,11 +280,7 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		client.Disconnect(0)
-		logMutex.Lock()
-		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("shutdown register failure\n")
-		f.Close()
-		logMutex.Unlock()
+		registerLog("shutdown register failure")
 		os.Exit(0)
 	}
 }
@@ -336,11 +325,7 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 			mess,_ = json.Marshal(messages.Status{Type: "Client Status", Status: "offline " + err.Error(), Attr: messages.Command{}})
 			t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
 			t.Wait()
-			logMutex.Lock()
-			f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			f.WriteString("crash "+err.Error()+"\n")
-			f.Close()
-			logMutex.Unlock()
+			registerLog("crash "+err.Error())
 			os.Exit(3)
 		}
 
@@ -384,10 +369,6 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 	token.Wait()
 	client.Disconnect(0)
 
-	logMutex.Lock()
-	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	f.WriteString("shutdown\n")
-	f.Close()
-	logMutex.Unlock()
+	registerLog("shutdown")
 	os.Exit(1)
 }

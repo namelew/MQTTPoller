@@ -51,11 +51,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		file.Close()
 	}
 
-	logMutex.Lock()
-	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	f.WriteString("start experiment "+ strconv.FormatInt(id, 10) + "\n")
-	f.Close()
-	logMutex.Unlock()
+	registerLog("start experiment "+ strconv.FormatInt(id, 10))
 
 	cmd := exec.Command("./"+tool, flag ,arg_file)
 
@@ -94,11 +90,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		t = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		logMutex.Lock()
-		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("crash experiment "+strconv.FormatInt(id, 10)+" error "+err.Error()+"\n")
-		f.Close()
-		logMutex.Unlock()
+		registerLog("crash experiment "+strconv.FormatInt(id, 10)+" error "+err.Error())
 		os.Exit(3)
 	}
 
@@ -109,21 +101,13 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		logMutex.Lock()
-		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("error experiment "+strconv.FormatInt(id, 10)+" hardware colapse\n")
-		f.Close()
-		logMutex.Unlock()
+		registerLog("error experiment "+strconv.FormatInt(id, 10)+" hardware colapse")
 	} else {
 		mess,_ = json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: "finish", Attr: messages.Command{}})
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		logMutex.Lock()
-		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("finish experiment "+strconv.FormatInt(id, 10)+"\n")
-		f.Close()
-		logMutex.Unlock()
+		registerLog("finish experiment "+strconv.FormatInt(id, 10))
 	}
 
 	resultsExperiment.Meta.ID = uint64(id)
@@ -139,11 +123,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 func Info(client mqtt.Client, arguments messages.Info, isUnix bool, clientID string){
 	var result messages.InfoDisplay
 
-	logMutex.Lock()
-	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	f.WriteString("execute info\n")
-	f.Close()
-	logMutex.Unlock()
+	registerLog("collecting info")
 	
 	if arguments.DiscDisplay{
 		rootPath := "/"
@@ -163,6 +143,8 @@ func Info(client mqtt.Client, arguments messages.Info, isUnix bool, clientID str
 	}
 
 	resp,_ := json.Marshal(result)
+
+	registerLog("sending info")
 
 	t := client.Publish(clientID + "/Info", byte(1), false, string(resp))
 	t.Wait()
