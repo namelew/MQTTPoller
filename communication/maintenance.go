@@ -19,9 +19,10 @@ import (
 	"github.com/namelew/mqtt-bm-latency/history"
 	"github.com/namelew/mqtt-bm-latency/messages"
 	"github.com/namelew/mqtt-bm-latency/utils"
+	"github.com/namelew/mqtt-bm-latency/communication/logs"
 )
 
-var logMutex sync.Mutex
+var log *logs.Log = logs.Build("worker.log")
 var experimentListMutex sync.Mutex
 var experimentList history.OngoingExperiments
 
@@ -76,7 +77,7 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64){
     byteSlice := []byte(argf)
     _, err := f.Write(byteSlice)
     if err != nil {
-		registerLog("load arguments error "+err.Error())
+		log.Register("load arguments error "+err.Error())
 		f.Close()
     }
 
@@ -126,7 +127,7 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 
 		err := filepath.Walk("output", func(path string, info os.FileInfo, err error) error {
 			if err != nil{
-				registerLog("extract failure "+err.Error())
+				log.Register("extract failure "+err.Error())
 				return nil
 			}
 
@@ -162,23 +163,6 @@ func workerKeepAlive(client mqtt.Client, msg string){
 		Ping(client, msg)
 		time.Sleep(time.Second)
 	}
-}
-
-func createLog() {
-	if !utils.FileExists("worker.log"){
-		f,_ := os.Create("worker.log")
-		f.Close()
-	} else{
-		os.Truncate("worker.log", 0)
-	}
-}
-
-func registerLog(msg string) {
-	logMutex.Lock()
-	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	f.WriteString(msg + "\n")
-	f.Close()
-	logMutex.Unlock()
 }
 
 func getToken() (string,bool,bool,bool){
@@ -220,7 +204,7 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 			token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 			token.Wait()
 			client.Disconnect(0)
-			registerLog("shutdown register failure")
+			log.Register("shutdown register failure")
 			os.Exit(0)
 			return
 		}
@@ -271,7 +255,7 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		client.Disconnect(0)
-		registerLog("shutdown login failure")
+		log.Register("shutdown login failure")
 		os.Exit(0)
 	}
 
@@ -280,13 +264,13 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		client.Disconnect(0)
-		registerLog("shutdown register failure")
+		log.Register("shutdown register failure")
 		os.Exit(0)
 	}
 }
 
 func Init(broker string, tool string,loginTimeout int, isUnix bool) {
-	createLog()
+	log.Create()
 
 	clientID,makeRegister,login_confirmation,register_confirmation := getToken()
 
@@ -325,7 +309,7 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 			mess,_ = json.Marshal(messages.Status{Type: "Client Status", Status: "offline " + err.Error(), Attr: messages.Command{}})
 			t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
 			t.Wait()
-			registerLog("crash "+err.Error())
+			log.Register("crash "+err.Error())
 			os.Exit(3)
 		}
 
@@ -369,6 +353,6 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 	token.Wait()
 	client.Disconnect(0)
 
-	registerLog("shutdown")
+	log.Register("shutdown")
 	os.Exit(1)
 }

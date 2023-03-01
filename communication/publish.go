@@ -51,7 +51,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		file.Close()
 	}
 
-	registerLog("start experiment "+ strconv.FormatInt(id, 10))
+	log.Register("start experiment "+ strconv.FormatInt(id, 10))
 
 	cmd := exec.Command("./"+tool, flag ,arg_file)
 
@@ -90,7 +90,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		t = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		registerLog("crash experiment "+strconv.FormatInt(id, 10)+" error "+err.Error())
+		log.Register("crash experiment "+strconv.FormatInt(id, 10)+" error "+err.Error())
 		os.Exit(3)
 	}
 
@@ -101,13 +101,13 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		registerLog("error experiment "+strconv.FormatInt(id, 10)+" hardware colapse")
+		log.Register("error experiment "+strconv.FormatInt(id, 10)+" hardware colapse")
 	} else {
 		mess,_ = json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: "finish", Attr: messages.Command{}})
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		registerLog("finish experiment "+strconv.FormatInt(id, 10))
+		log.Register("finish experiment "+strconv.FormatInt(id, 10))
 	}
 
 	resultsExperiment.Meta.ID = uint64(id)
@@ -123,7 +123,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 func Info(client mqtt.Client, arguments messages.Info, isUnix bool, clientID string){
 	var result messages.InfoDisplay
 
-	registerLog("collecting info")
+	log.Register("collecting info")
 	
 	if arguments.DiscDisplay{
 		rootPath := "/"
@@ -144,7 +144,7 @@ func Info(client mqtt.Client, arguments messages.Info, isUnix bool, clientID str
 
 	resp,_ := json.Marshal(result)
 
-	registerLog("sending info")
+	log.Register("sending info")
 
 	t := client.Publish(clientID + "/Info", byte(1), false, string(resp))
 	t.Wait()
