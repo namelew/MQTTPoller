@@ -77,7 +77,7 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64){
     byteSlice := []byte(argf)
     _, err := f.Write(byteSlice)
     if err != nil {
-		log.Register("load arguments error "+err.Error())
+		log.Register("Load arguments error "+err.Error())
 		f.Close()
     }
 
@@ -127,7 +127,7 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 
 		err := filepath.Walk("output", func(path string, info os.FileInfo, err error) error {
 			if err != nil{
-				log.Register("extract failure "+err.Error())
+				log.Register("Extract failure "+err.Error())
 				return nil
 			}
 
@@ -204,7 +204,7 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 			token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 			token.Wait()
 			client.Disconnect(0)
-			log.Register("shutdown register failure")
+			log.Register("Shutdown register failure")
 			os.Exit(0)
 			return
 		}
@@ -241,6 +241,7 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 		token.Wait()
 
 		cd := 0
+		log.Register("Waiting login confirmation")
 		for !login_confirmation{
 			if cd >= loginTimeout{
 				break
@@ -255,7 +256,7 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		client.Disconnect(0)
-		log.Register("shutdown login failure")
+		log.Register("Shutdown login failure")
 		os.Exit(0)
 	}
 
@@ -264,16 +265,19 @@ func authentication(client mqtt.Client, clientID string, loginTimeout int, makeR
 		token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		client.Disconnect(0)
-		log.Register("shutdown register failure")
+		log.Register("Shutdown register failure")
 		os.Exit(0)
 	}
+	log.Register("Login sucess")
 }
 
 func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 	log.Create()
 
+	log.Register("Preparing authentication token")
 	clientID,makeRegister,login_confirmation,register_confirmation := getToken()
 
+	log.Register("Configuring mqtt paho client")
 	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
 
 	opts := mqtt.NewClientOptions().
@@ -287,16 +291,20 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 	
 	client := mqtt.NewClient(opts)
 
+	log.Register("Connecting new mqtt paho client to "+ broker +" broker")
 	tokenConnection := client.Connect()
 
 	tokenConnection.Wait()
 
+	log.Register("Authenticate token")
 	authentication(client, clientID, loginTimeout, makeRegister, login_confirmation, register_confirmation)
 
+	log.Register("Warning orquestrator that worker is online")
 	mess,_ := json.Marshal(messages.Status{Type: "Client Status", Status: "online", Attr: messages.Command{}})
 	token := client.Publish(clientID+"/Status", byte(1), true, string(mess))
 	token.Wait()
 
+	log.Register("Subscribing command topic")
 	token = client.Subscribe(clientID+"/Command", byte(1), func(c mqtt.Client, m mqtt.Message) {
 		if m.Retained(){
 			return
@@ -309,7 +317,7 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 			mess,_ = json.Marshal(messages.Status{Type: "Client Status", Status: "offline " + err.Error(), Attr: messages.Command{}})
 			t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
 			t.Wait()
-			log.Register("crash "+err.Error())
+			log.Register("Crash "+err.Error())
 			os.Exit(3)
 		}
 
@@ -335,24 +343,27 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 
 	token.Wait()
 
+	log.Register("Subscribing ping topic")
 	token = client.Subscribe(clientID+"/Ping", byte(1), func(c mqtt.Client, m mqtt.Message) {
 		Ping(client, clientID)
 	})
 
 	token.Wait()
 
+	log.Register("Starting keepalive thread")
 	go workerKeepAlive(client, clientID)
 
 	c := make(chan os.Signal, 1)
 
     signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
+	log.Register("Block main thread")
 	<- c
 	mess,_ = json.Marshal(messages.Status{Type: "Client messages.Status", Status: "offline", Attr: messages.Command{}})
 	token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 	token.Wait()
 	client.Disconnect(0)
 
-	log.Register("shutdown")
+	log.Register("Shutdown")
 	os.Exit(1)
 }

@@ -18,6 +18,7 @@ import (
 )
 
 func Ping(client mqtt.Client, m string){
+	log.Register("Sending ka message to orquestrator")
 	t := client.Publish("Orquestrator/Ping", byte(1), false, m)
 	t.Wait()
 }
@@ -28,11 +29,28 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 	var createLogFile bool = false
 	var id int64
 
-	if(!utils.FileExists("myconfig.conf")){
-		file,_ := os.Create("myconfig.conf")
+	if !utils.FileExists("myconfig.conf"){
+		file,err := os.Create("myconfig.conf")
+
+		if err != nil {
+			log.Register("Can't create mqttloader config file")
+			mess,_ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline " + err.Error(), Attr: messages.Command{}})
+			t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
+			t.Wait()
+			os.Exit(3)
+		}
+
 		file.Close()
 	}
-	os.Truncate("myconfig.conf", 0)
+	err := os.Truncate("myconfig.conf", 0)
+
+	if err != nil {
+		log.Register("Can't to truncate mqttloader config file")
+		mess,_ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline " + err.Error(), Attr: messages.Command{}})
+		t := client.Publish(clientID+"/Status", byte(1), true, string(mess))
+		t.Wait()
+		os.Exit(3)
+	}
 
 	if cmdExp.Arguments != nil{
 		createLogFile,id = loadArguments("myconfig.conf", cmdExp.Arguments)
@@ -51,7 +69,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		file.Close()
 	}
 
-	log.Register("start experiment "+ strconv.FormatInt(id, 10))
+	log.Register("Start experiment "+ strconv.FormatInt(id, 10))
 
 	cmd := exec.Command("./"+tool, flag ,arg_file)
 
@@ -62,7 +80,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 	var stderr bytes.Buffer
 	cmd.Stdout = &output
 	cmd.Stderr = &stderr
-	err := cmd.Start()
+	err = cmd.Start()
 
 	experimentNode := history.CreateRegister(id, cmd.Process)
 
@@ -90,7 +108,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		t = client.Publish(clientID+"/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		log.Register("crash experiment "+strconv.FormatInt(id, 10)+" error "+err.Error())
+		log.Register("Crash experiment "+strconv.FormatInt(id, 10)+" error "+err.Error())
 		os.Exit(3)
 	}
 
@@ -101,13 +119,13 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		log.Register("error experiment "+strconv.FormatInt(id, 10)+" hardware colapse")
+		log.Register("Error experiment "+strconv.FormatInt(id, 10)+" hardware colapse")
 	} else {
 		mess,_ = json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: "finish", Attr: messages.Command{}})
 		t = client.Publish(clientID+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		log.Register("finish experiment "+strconv.FormatInt(id, 10))
+		log.Register("Finish experiment "+strconv.FormatInt(id, 10))
 	}
 
 	resultsExperiment.Meta.ID = uint64(id)
@@ -123,7 +141,7 @@ func Start(client mqtt.Client, clientID string, tool string, cmdExp messages.Com
 func Info(client mqtt.Client, arguments messages.Info, isUnix bool, clientID string){
 	var result messages.InfoDisplay
 
-	log.Register("collecting info")
+	log.Register("Collecting info")
 	
 	if arguments.DiscDisplay{
 		rootPath := "/"
@@ -144,7 +162,7 @@ func Info(client mqtt.Client, arguments messages.Info, isUnix bool, clientID str
 
 	resp,_ := json.Marshal(result)
 
-	log.Register("sending info")
+	log.Register("Sending info")
 
 	t := client.Publish(clientID + "/Info", byte(1), false, string(resp))
 	t.Wait()

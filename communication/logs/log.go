@@ -1,8 +1,10 @@
 package logs
 
 import (
-	"sync"
+	"log"
 	"os"
+	"sync"
+
 	"github.com/namelew/mqtt-bm-latency/utils"
 )
 
@@ -29,6 +31,7 @@ func (l *Log) Create() {
 
 func (l *Log) Register(msg string) {
 	l.m.Lock()
+	log.Println(msg)
 	f,_ := os.OpenFile(l.filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	f.WriteString(msg + "\n")
 	f.Close()
