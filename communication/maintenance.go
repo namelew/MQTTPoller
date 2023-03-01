@@ -54,6 +54,7 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64){
 	argf += fmt.Sprintf("interval=%d\n", arguments.Interval)
 	argf += fmt.Sprintf("subscriber_timeout=%d\n", arguments.SubscriberTimeout)
 	argf += fmt.Sprintf("log_level=%s\n", arguments.LogLevel)
+	argf += fmt.Sprintf("exec_time=%d\n", arguments.Exec_time)
 	argf += fmt.Sprintf("%sntp=%s\n", isNull(arguments.Ntp),arguments.Ntp)
 	if arguments.Output {argf += fmt.Sprintf("output=%s\n", "output")}
 	argf += fmt.Sprintf("%suser_name=%s\n", isNull(arguments.User),arguments.User)
@@ -428,22 +429,20 @@ func Init(broker string, tool string,loginTimeout int, isUnix bool) {
 		redo(client, clientID, tool, redoList)
 	}
 
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 
     signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	go func() {
-		<- c
-		mess,_ := json.Marshal(messages.Status{Type: "Client messages.Status", Status: "offline", Attr: messages.Command{}})
-		token := client.Publish(clientID+"/Status", byte(1), true, string(mess))
-		token.Wait()
-		client.Disconnect(0)
+	<- c
+	mess,_ = json.Marshal(messages.Status{Type: "Client messages.Status", Status: "offline", Attr: messages.Command{}})
+	token = client.Publish(clientID+"/Status", byte(1), true, string(mess))
+	token.Wait()
+	client.Disconnect(0)
 
-		logMutex.Lock()
-		f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		f.WriteString("shutdown\n")
-		f.Close()
-		logMutex.Unlock()
-		os.Exit(1)
-	}()
+	logMutex.Lock()
+	f,_ := os.OpenFile("worker.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f.WriteString("shutdown\n")
+	f.Close()
+	logMutex.Unlock()
+	os.Exit(1)
 }
