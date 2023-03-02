@@ -7,3 +7,6 @@ workers
 orquestrator
 dump
 *.log
+*.conf
+*.config
+*.bin
