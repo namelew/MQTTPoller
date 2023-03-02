@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/input"
+	"github.com/namelew/mqtt-bm-latency/logs"
 	"github.com/namelew/mqtt-bm-latency/messages"
 	"github.com/namelew/mqtt-bm-latency/output"
 	"github.com/namelew/mqtt-bm-latency/utils"
@@ -19,6 +19,7 @@ import (
 
 var workers = make([]messages.Worker, 1, 10)
 var infos = make([]output.Info, 0, 10)
+var oLog = logs.Build("orquestrator.log")
 var rexp []output.ExperimentResult
 var rexpMutex sync.Mutex
 var waitQueueMutex sync.Mutex
@@ -31,8 +32,6 @@ func GetWorkers() []messages.Worker {
 }
 
 func Init(broker string, t_interval int) error{
-	var currentSession messages.Session
-	currentSession.Finish = true
 	var clientID string = "Orquestrator"
 	ka, err := time.ParseDuration(strconv.Itoa(10000) + "s")
 
@@ -40,15 +39,7 @@ func Init(broker string, t_interval int) error{
 		return err
 	}
 
-	if !utils.FileExists("orquestrator.log") {
-		f, err := os.Create("orquestrator.log")
-		if err != nil {
-			return err
-		}
-		f.Close()
-	} else {
-		os.Truncate("orquestrator.log", 0)
-	}
+	oLog.Create()
 
 	opts := mqtt.NewClientOptions().
 		AddBroker(broker).
@@ -61,29 +52,13 @@ func Init(broker string, t_interval int) error{
 
 	client = mqtt.NewClient(opts)
 
-	f, err := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	f.WriteString("connect mqtt.client\n")
-	f.Close()
+	oLog.Register("connect paho mqtt client to broker " + broker)
 
 	tokenConnection := client.Connect()
 
 	tokenConnection.Wait()
 
-	token := client.Subscribe("Orquestrator/Sessions", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		err := json.Unmarshal(m.Payload(), &currentSession)
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-	})
-	token.Wait()
-
-	token = client.Unsubscribe("Orquestrator/Sessions")
-	token.Wait()
-
-	token = client.Subscribe("Orquestrator/Register", byte(1), func(c mqtt.Client, m mqtt.Message) {
+	token := client.Subscribe("Orquestrator/Register", byte(1), func(c mqtt.Client, m mqtt.Message) {
 		var clientID string = ""
 		var seed rand.Source
 		var random *rand.Rand
@@ -94,12 +69,7 @@ func Init(broker string, t_interval int) error{
 			clientID += fmt.Sprintf("%d", random.Int()%10)
 		}
 
-		f, err := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		f.WriteString("worker " + clientID + " register\n")
-		f.Close()
+		oLog.Register("worker " + clientID + " registed")
 
 		if workers[0].Id == "" {
 			workers[0] = messages.Worker{Id: clientID, Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
@@ -120,12 +90,7 @@ func Init(broker string, t_interval int) error{
 	token.Wait()
 
 	token = client.Subscribe("Orquestrator/Login", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		f, err := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		f.WriteString("worker " + string(m.Payload()) + " login\n")
-		f.Close()
+		oLog.Register("worker " + string(m.Payload()) + " loged")
 		if !utils.IsIn(workers, string(m.Payload())) {
 			if workers[0].Id == "" {
 				workers[0] = messages.Worker{Id: string(m.Payload()), Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
@@ -180,22 +145,12 @@ func Init(broker string, t_interval int) error{
 	return nil
 }
 
-func End() error{
-	f, err := os.OpenFile("orquestrator.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-
-	if err != nil {
-		client.Disconnect(0)
-		return err
-	}
-	f.WriteString("disconnect mqtt.client\n")
+func End() {
+	oLog.Register("disconnect mqtt.client")
 
 	client.Disconnect(0)
 
-	f.WriteString("shutdown")
-
-	defer f.Close()
-	
-	return nil
+	oLog.Register("shutdown")
 }
 
 func setMessageHandler(id int) {

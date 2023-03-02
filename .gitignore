@@ -6,4 +6,7 @@ workers
 orquestrator
 examples
 dump
+*.config
+*.conf
+*.bin
 *.log

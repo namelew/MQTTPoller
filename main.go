@@ -26,17 +26,13 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		<-c
-		err = orquestration.End()
-
-		if err != nil {
-			log.Fatal(err.Error())
-		}
+		orquestration.End()
 		os.Exit(1)
 	}()
 
@@ -49,9 +45,5 @@ func main() {
 
 	api.Logger.Fatal(api.Start(":"+*port))
 
-	err = orquestration.End()
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	orquestration.End()
 }
