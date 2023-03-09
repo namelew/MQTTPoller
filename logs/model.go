@@ -9,13 +9,13 @@ import (
 )
 
 type Log struct {
-	file string
+	file  string
 	mutex *sync.Mutex
 }
 
 func Build(f string) *Log {
 	return &Log{
-		file: f,
+		file:  f,
 		mutex: &sync.Mutex{},
 	}
 }
@@ -37,7 +37,7 @@ func (l *Log) Create() {
 func (l *Log) Register(s string) {
 	l.mutex.Lock()
 	f, err := os.OpenFile(l.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	
+
 	log.Println(s)
 
 	if err != nil {
@@ -47,4 +47,9 @@ func (l *Log) Register(s string) {
 
 	f.WriteString(s + "\n")
 	l.mutex.Unlock()
+}
+
+func (l *Log) Fatal(s string) {
+	l.Register(s)
+	os.Exit(1)
 }

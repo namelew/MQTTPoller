@@ -10,6 +10,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/namelew/mqtt-bm-latency/databases"
 	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/logs"
 	"github.com/namelew/mqtt-bm-latency/messages"
@@ -31,7 +32,7 @@ func GetWorkers() []messages.Worker {
 	return workers
 }
 
-func Init(broker string, t_interval int) error{
+func Init(broker string, t_interval int) error {
 	var clientID string = "Orquestrator"
 	ka, err := time.ParseDuration(strconv.Itoa(10000) + "s")
 
@@ -57,6 +58,10 @@ func Init(broker string, t_interval int) error{
 	tokenConnection := client.Connect()
 
 	tokenConnection.Wait()
+
+	oLog.Register("Starting database")
+
+	databases.Connect(oLog)
 
 	token := client.Subscribe("Orquestrator/Register", byte(1), func(c mqtt.Client, m mqtt.Message) {
 		var clientID string = ""
@@ -164,9 +169,9 @@ func setMessageHandler(id int) {
 	token.Wait()
 }
 
-func StartExperiment(arg input.Start) ([]output.ExperimentResult, error){
+func StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
 	expid := time.Now().Unix()
-	
+
 	rexpMutex.Lock()
 	rexp = nil
 	rexpMutex.Unlock()
@@ -206,16 +211,16 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult, error){
 	experiment.Tool = arg.Description.Tool
 	experiment.Topic = arg.Description.Topic
 	experiment.User = arg.Description.User
-	
+
 	err := experiment.Attach(&cmd)
 
-	if err != nil{
+	if err != nil {
 		return rexp, err
 	}
 
-	msg,err := json.Marshal(cmd)
+	msg, err := json.Marshal(cmd)
 
-	if err != nil{
+	if err != nil {
 		return rexp, err
 	}
 
@@ -272,10 +277,10 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult, error){
 	waitQueue = nil
 	waitQueueMutex.Unlock()
 
-	return rexp,nil
+	return rexp, nil
 }
 
-func CancelExperiment(id int, expid int64) error{
+func CancelExperiment(id int, expid int64) error {
 	arg := make(map[string]interface{})
 	arg["id"] = expid
 	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: arg}
@@ -295,7 +300,7 @@ func CancelExperiment(id int, expid int64) error{
 	return nil
 }
 
-func GetInfo(arg input.Info) ([]output.Info, error){
+func GetInfo(arg input.Info) ([]output.Info, error) {
 	var infoCommand messages.Command
 	infos = nil
 
@@ -373,5 +378,5 @@ func GetInfo(arg input.Info) ([]output.Info, error){
 		}
 	}
 
-	return infos,nil
+	return infos, nil
 }
