@@ -8,7 +8,7 @@ WORKDIR /app
 COPY dump/orquestrator/ /app/
 
 RUN apk update
-RUN apk add git make
+RUN apk add git make build-base
 RUN make
 
 EXPOSE ${port}
