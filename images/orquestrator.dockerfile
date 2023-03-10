@@ -1,16 +1,18 @@
-FROM golang:1.17.13-alpine
-
-ENV tolerance=5
-ENV broker=localhost
-ENV port=8000
+FROM golang:1.17.13-alpine as base
 
 WORKDIR /app
 COPY dump/orquestrator/ /app/
 
-RUN apk update
-RUN apk add git make build-base
-RUN make
+RUN apk update; apk add make build-base; make
+
+FROM alpine:3.17 as binary
+
+ENV tolerance=5
+ENV broker=tcp://localhost:1883
+ENV port=8000
+
+COPY --from=base /app/bin/orquestrator ./app/orquestrator
 
 EXPOSE ${port}
 
-ENTRYPOINT cd bin; ./orquestrator --broker tcp://${broker}:1883 --tl ${tolerance} --port ${port}
+ENTRYPOINT cd /app; ./orquestrator --broker ${broker} --tl ${tolerance} --port ${port}
