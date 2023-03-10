@@ -1,0 +1,90 @@
+package models
+
+import "gorm.io/gorm"
+
+type Experiment struct {
+	gorm.Model
+	ExperimentDeclarationID uint64
+	LogLevel                uint8
+	ToleranceLevel          uint8
+	Workers                 []*Worker `gorm:"many2many:experiments_workers;"`
+}
+
+type ExperimentStatus struct {
+	ExperimentID uint64
+	Finish       bool
+	Status       string
+}
+
+type ExperimentDeclaration struct {
+	ID                    uint64 `gorm:"primarykey"`
+	Attempts              int
+	Tool                  string
+	Broker                string
+	Port                  uint
+	MqttVersion           uint8
+	NumPublishers         uint
+	NumSubscriber         uint
+	QosPublisher          uint8
+	QosSubscriber         uint8
+	SharedSubscrition     bool
+	Retain                bool
+	Topic                 string
+	Payload               uint64
+	NumMessages           uint
+	RampUp                int
+	RampDown              int
+	Interval              uint64
+	SubscriberTimeout     uint64
+	ExecTime              uint64
+	LogLevel              string
+	Ntp                   string
+	Output                bool
+	User                  string
+	Password              string
+	TlsTrustsore          string
+	TlsTruststorePassword string
+	TlsKeystore           string
+	TlsKeystorePassword   string
+}
+
+type ExperimentResult struct {
+	ID                  uint64 `gorm:"primarykey"`
+	ExperimentID        uint64
+	Error               string
+	Tool                string
+	Literal             string
+	Filename            string
+	FileData            []byte
+	FileExtension       string
+	SubThroughput       float64
+	SubAvgThroughput    float64
+	SubReceivedMessages uint
+	SubLatency          float64
+	SubAvgLatency       float64
+	PubThroughput       float64
+	PubAvgThroughput    float64
+	PubMessages         uint
+	Experiment          Experiment
+}
+
+type ExperimentResultPerSecondThrouput struct {
+	ExperimentResultID uint64
+	Time               uint64
+	Value              int
+	Action             string
+}
+
+type Info struct {
+	WorkerID uint64
+	Cpu      string
+	Ram      uint64
+	Disk     uint64
+}
+
+type Worker struct {
+	gorm.Model
+	Token             string
+	KeepAliveDeadline uint64
+	Experiments       []*Experiment `gorm:"many2many:experiments_workers;"`
+}
