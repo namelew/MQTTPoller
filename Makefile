@@ -1,12 +1,12 @@
-EXE=orquestrator
-
 all: build
 
 build:
-	go mod init puppy
-	go build -o bin/$(EXE) -modfile source/go.mod source/main.go source/messages.go source/sessionControl.go
-	rm -f go.mod
+	git clone -b orquestrator https://github.com/namelew/MQTTDistributedBenck dump/orquestrator
+	git clone -b worker https://github.com/namelew/MQTTDistributedBenck dump/worker
+	docker build -t mqttdb/orquestrator:1 -f "images/orquestrator.dockerfile" .
+	docker build -t mqttdb/worker:1 -f "images/worker.dockerfile" .
+	docker compose up -d
 
 clean:
-	rm -f bin/$(EXE)
+	rm -rf dump
 	
