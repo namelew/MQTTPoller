@@ -74,17 +74,3 @@ type ExperimentResultPerSecondThrouput struct {
 	Value              int
 	Action             string
 }
-
-type Info struct {
-	WorkerID uint64
-	Cpu      string
-	Ram      uint64
-	Disk     uint64
-}
-
-type Worker struct {
-	gorm.Model
-	Token             string
-	KeepAliveDeadline uint64
-	Experiments       []*Experiment `gorm:"many2many:experiments_workers;"`
-}
