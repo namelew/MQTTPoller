@@ -8,18 +8,18 @@ import (
 )
 
 var (
-	db  *gorm.DB
+	DB  *gorm.DB
 	err error
 )
 
 func Connect(l *logs.Log) {
-	db, err = gorm.Open(sqlite.Open("./orquestrator.db"), &gorm.Config{})
+	DB, err = gorm.Open(sqlite.Open("./orquestrator.db"), &gorm.Config{})
 
 	if err != nil {
 		l.Fatal("Database open error: " + err.Error())
 	}
 
-	err = db.AutoMigrate(
+	err = DB.AutoMigrate(
 		&models.Experiment{},
 		&models.ExperimentResult{},
 		&models.ExperimentResultPerSecondThrouput{},
