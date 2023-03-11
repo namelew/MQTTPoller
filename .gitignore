@@ -2,7 +2,7 @@
 *.config
 tools
 .vscode
-workers
+worker
 orquestrator
 examples
 dump

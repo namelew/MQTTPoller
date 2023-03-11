@@ -11,6 +11,8 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/databases"
+	"github.com/namelew/mqtt-bm-latency/databases/models"
+	seworkers "github.com/namelew/mqtt-bm-latency/databases/services/workers"
 	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/logs"
 	"github.com/namelew/mqtt-bm-latency/messages"
@@ -18,9 +20,10 @@ import (
 	"github.com/namelew/mqtt-bm-latency/utils"
 )
 
-var workers = make([]messages.Worker, 1, 10)
-var infos = make([]output.Info, 0, 10)
 var oLog = logs.Build("orquestrator.log")
+var serviceWorkers = seworkers.Build(oLog)
+var infos = make([]output.Info, 0, 10)
+var workers = make([]messages.Worker, 1, 10)
 var rexp []output.ExperimentResult
 var rexpMutex sync.Mutex
 var waitQueueMutex sync.Mutex
@@ -29,6 +32,7 @@ var expWG sync.WaitGroup
 var client mqtt.Client
 
 func GetWorkers() []messages.Worker {
+	log.Println(serviceWorkers.List(nil))
 	return workers
 }
 
@@ -76,6 +80,8 @@ func Init(broker string, t_interval int) error {
 
 		oLog.Register("worker " + clientID + " registed")
 
+		serviceWorkers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Experiments: nil})
+
 		if workers[0].Id == "" {
 			workers[0] = messages.Worker{Id: clientID, Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
 
@@ -95,6 +101,9 @@ func Init(broker string, t_interval int) error {
 	token.Wait()
 
 	token = client.Subscribe("Orquestrator/Login", byte(1), func(c mqtt.Client, m mqtt.Message) {
+		w := (serviceWorkers.List(&models.Worker{Token: string(m.Payload())}))[0]
+		serviceWorkers.ChangeStatus(uint64(w.ID), models.WorkerStatus{Online: true})
+
 		oLog.Register("worker " + string(m.Payload()) + " loged")
 		if !utils.IsIn(workers, string(m.Payload())) {
 			if workers[0].Id == "" {

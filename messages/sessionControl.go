@@ -6,14 +6,6 @@ type Status struct {
 	Attr   Command `json:"attr"`
 }
 
-type Session struct {
-	Id             int
-	Finish         bool
-	Status         Status
-	LogLevel       int
-	ToleranceLevel int
-}
-
 type ExperimentLog struct {
 	Id       int64
 	Attempts int
