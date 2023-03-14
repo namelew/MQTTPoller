@@ -1,7 +1,7 @@
 FROM golang:1.18-alpine as base
 
 WORKDIR /app
-COPY dump/orquestrator/ /app/
+COPY dump /app/
 
 RUN apk update; apk add make build-base; make
 

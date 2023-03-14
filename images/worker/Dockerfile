@@ -1,7 +1,7 @@
 FROM golang:1.17.13-alpine as base
 
 WORKDIR /app
-COPY dump/worker/ /app/
+COPY dump /app/
 
 RUN apk update; apk add make; make
 
