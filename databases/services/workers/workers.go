@@ -65,7 +65,7 @@ func (h *Workers) Update(id uint, new models.Worker) {
 	}
 }
 
-func (h *Workers) ChangeStatus(id uint64, new filters.Worker) {
+func (h *Workers) ChangeStatus(new *filters.Worker) {
 	cerr := make(chan error, 1)
 
 	go func() {
@@ -73,7 +73,7 @@ func (h *Workers) ChangeStatus(id uint64, new filters.Worker) {
 			Online: new.Online,
 			Error:  new.Error,
 		}
-		cerr <- (databases.DB.Where(&models.Worker{WorkerID: id}).UpdateColumns(worker)).Error
+		cerr <- (databases.DB.Where(&models.Worker{WorkerID: new.WorkerID, Token: new.Token}).UpdateColumns(worker)).Error
 	}()
 
 	err := <-cerr

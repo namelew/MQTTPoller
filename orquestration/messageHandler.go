@@ -50,8 +50,7 @@ func Register(c mqtt.Client, m mqtt.Message) {
 }
 
 func Login(c mqtt.Client, m mqtt.Message) {
-	w := (serviceWorkers.List(&filters.Worker{Token: string(m.Payload())}))[0]
-	serviceWorkers.ChangeStatus(uint64(w.ID), filters.Worker{Online: true})
+	serviceWorkers.ChangeStatus(&filters.Worker{Token: string(m.Payload()), Online: true})
 
 	oLog.Register("worker " + string(m.Payload()) + " loged")
 	if !utils.IsIn(workers, string(m.Payload())) {
