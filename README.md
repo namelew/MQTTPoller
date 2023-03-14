@@ -14,13 +14,8 @@ make
  ```
 ## Example - Docker
 ```
-mkdir dump
-cd dump
-git clone -b orquestrator https://github.com/namelew/MQTTDistributedBenck orquestrator
-git clone -b worker https://github.com/namelew/MQTTDistributedBenck worker
-cd ..
-docker build -t mqttdb/orquestrator:1 -f "images/orquestrator.dockerfile" .
-docker build -t mqttdb/worker:1 -f "images/worker.dockerfile" .
+git clone -b orquestrator https://github.com/namelew/MQTTDistributedBenck images/orquestrator/dump
+git clone -b worker https://github.com/namelew/MQTTDistributedBenck images/worker/dump
 docker compose up -d
 ```
 ## Utilização
@@ -29,34 +24,15 @@ Para iniciar o orquestrador execute o binário orquestrator, que será gerado no
 | Flag | Default value | Description |
 |:-----|:--------------|:------------|
 | tl | 5 | tempo de tolerância para batidas de coração dos workers|
-| broker | `tcp://localhost:1883` | Communication broker to worker - orquestrator relation|
+| broker | `tcp://localhost:1883` | communication broker to worker - orquestrator relation|
+| port   | 8000 | api rest communication port |
 
 Após isso, abrirá um shell interativo de controle para a ferramenta. Ele aceita, quatro commandos diferentes:
 | Command | Description |
 |:-----|:------------|
 | ls | lista todos os workers cadastrados durante a sessão atual|
-| start | Inicia experimentos em 1 ou mais worker|
-| info  | Recuperação informações de hardware e do sistema operacional de um ou mais workers |
-| cancel | Cancela um experimento em execução em um worker|
+| start | inicia experimentos em 1 ou mais worker|
+| info  | recuperação informações de hardware e do sistema operacional de um ou mais workers |
+| cancel | cancela um experimento em execução em um worker|
 
 ### Exemplos
-* Listando workers cadastrados
-```
-ls
-```
-* Listando experimentos realizados pelo worker 0
-```
-ls -i 0
-```
-* Disparando um experimento em todos os workers
-```
-start
-```
-* Disparando experimento no worker 0 com arquivo de configuração command.json
-```
-start -i 0 -f examples/command.json
-```
-* Cancelando experimento de id 1000000 no worker 0
-```
-cancel 0 1000000
-```

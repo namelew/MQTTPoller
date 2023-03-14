@@ -9,7 +9,12 @@ services:
      - example_experiment_network
   orquestrator:
     container_name: orquestrator
-    image: mqttdb/orquestrator:1
+    build:
+      context: ./images/orquestrator
+      cache_from:
+        - golang:1.18-alpine
+        - alpine:3.17
+    image: mqttdb/orquestrator:latest
     ports:
       - 8000:8000
     networks:
@@ -21,7 +26,12 @@ services:
       - broker
   workers:
     container_name: worker
-    image: mqttdb/worker:1
+    build:
+      context: ./images/worker
+      cache_from:
+        - golang:1.17.13-alpine
+        - alpine:3.17
+    image: mqttdb/worker:latest
     networks:
      - example_experiment_network
     environment:
