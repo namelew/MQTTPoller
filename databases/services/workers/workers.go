@@ -73,7 +73,7 @@ func (h *Workers) ChangeStatus(new *filters.Worker) {
 			Online: new.Online,
 			Error:  new.Error,
 		}
-		cerr <- (databases.DB.Where(&models.Worker{WorkerID: new.WorkerID, Token: new.Token}).UpdateColumns(worker)).Error
+		cerr <- (databases.DB.Where(&models.Worker{ID: new.WorkerID, Token: new.Token}).UpdateColumns(worker)).Error
 	}()
 
 	err := <-cerr
@@ -88,10 +88,10 @@ func (h *Workers) List(filter *filters.Worker) []models.Worker {
 
 	if filter != nil {
 		if err := (databases.DB.Where(&models.Worker{
-			WorkerID: filter.WorkerID,
-			Token:    filter.Token,
-			Online:   filter.Online,
-			Error:    filter.Error,
+			ID:     filter.WorkerID,
+			Token:  filter.Token,
+			Online: filter.Online,
+			Error:  filter.Error,
 		}).Find(&workers)).Error; err != nil {
 			h.log.Fatal("Unable to find matched workers")
 		}
@@ -104,10 +104,10 @@ func (h *Workers) List(filter *filters.Worker) []models.Worker {
 	return workers
 }
 
-func (h *Workers) Get(id uint) *models.Worker {
+func (h *Workers) Get(id int) *models.Worker {
 	var worker models.Worker
 
-	if err := (databases.DB.Find(&worker, id)); err != nil {
+	if err := (databases.DB.Model(&models.Worker{ID: uint64(id)}).Find(&worker)).Error; err != nil {
 		h.log.Fatal("Unable to find worker")
 	}
 

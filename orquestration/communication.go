@@ -31,8 +31,12 @@ var waitQueue []output.ExperimentResult
 var expWG sync.WaitGroup
 var client mqtt.Client
 
-func GetWorkers(filter *filters.Worker) []models.Worker {
+func ListWorkers(filter *filters.Worker) []models.Worker {
 	return serviceWorkers.List(filter)
+}
+
+func GetWorker(id int) *models.Worker {
+	return serviceWorkers.Get(id)
 }
 
 func Init(broker string, t_interval int) error {

@@ -1,13 +1,16 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
+)
 
 type Worker struct {
-	gorm.Model
+	ID                uint64 `gorm:"primarykey"`
 	Token             string
 	KeepAliveDeadline uint64
-	WorkerID          uint64
 	Online            bool
 	Error             string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 	Experiments       []*Experiment `gorm:"many2many:experiments_workers;"`
 }

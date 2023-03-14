@@ -2,11 +2,9 @@ package controllers
 
 import (
 	"encoding/json"
-	"log"
 	"strconv"
 
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/orquestration"
 	"github.com/namelew/mqtt-bm-latency/output"
@@ -15,7 +13,7 @@ import (
 func GetWorker(c echo.Context) error {
 	switch c.Request().URL.Path {
 	case "/orquestrator/worker":
-		workers := orquestration.GetWorkers(nil)
+		workers := orquestration.ListWorkers(nil)
 		response := make([]output.Worker, 0)
 
 		for i := range workers {
@@ -25,18 +23,12 @@ func GetWorker(c echo.Context) error {
 		return c.JSON(200, response)
 	default:
 		wid, err := strconv.Atoi(c.Param("id"))
+
 		if err != nil {
 			return echo.ErrBadRequest
 		}
-		workers := orquestration.GetWorkers(&filters.Worker{WorkerID: uint64(wid)})
 
-		if len(workers) < 1 {
-			return echo.ErrNotFound
-		}
-
-		log.Println(workers)
-
-		worker := workers[0]
+		worker := orquestration.GetWorker(wid)
 
 		response := output.Worker{Id: int(worker.ID), NetId: worker.Token, Online: worker.Online, History: nil}
 
