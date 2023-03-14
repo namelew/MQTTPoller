@@ -2,23 +2,18 @@ package orquestration
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	"math/rand"
 	"strconv"
 	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/databases"
-	"github.com/namelew/mqtt-bm-latency/databases/filters"
-	"github.com/namelew/mqtt-bm-latency/databases/models"
 	seworkers "github.com/namelew/mqtt-bm-latency/databases/services/workers"
 	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/logs"
 	"github.com/namelew/mqtt-bm-latency/messages"
 	"github.com/namelew/mqtt-bm-latency/output"
-	"github.com/namelew/mqtt-bm-latency/utils"
 )
 
 var oLog = logs.Build("orquestrator.log")
@@ -68,93 +63,13 @@ func Init(broker string, t_interval int) error {
 
 	databases.Connect(oLog)
 
-	token := client.Subscribe("Orquestrator/Register", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		var clientID string = ""
-		var seed rand.Source
-		var random *rand.Rand
-
-		for i := 0; i < 10; i++ {
-			seed = rand.NewSource(time.Now().UnixNano())
-			random = rand.New(seed)
-			clientID += fmt.Sprintf("%d", random.Int()%10)
-		}
-
-		oLog.Register("worker " + clientID + " registed")
-
-		serviceWorkers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Experiments: nil})
-
-		if workers[0].Id == "" {
-			workers[0] = messages.Worker{Id: clientID, Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
-
-			t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
-			t.Wait()
-
-			setMessageHandler(0)
-			return
-		}
-		workers = append(workers, messages.Worker{Id: clientID, Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}})
-
-		t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
-		t.Wait()
-
-		setMessageHandler(len(workers) - 1)
-	})
+	token := client.Subscribe("Orquestrator/Register", byte(1), Register)
 	token.Wait()
 
-	token = client.Subscribe("Orquestrator/Login", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		w := (serviceWorkers.List(&filters.Worker{Token: string(m.Payload())}))[0]
-		serviceWorkers.ChangeStatus(uint64(w.ID), filters.Worker{Online: true})
-
-		oLog.Register("worker " + string(m.Payload()) + " loged")
-		if !utils.IsIn(workers, string(m.Payload())) {
-			if workers[0].Id == "" {
-				workers[0] = messages.Worker{Id: string(m.Payload()), Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
-
-				t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true, "true")
-				t.Wait()
-
-				setMessageHandler(0)
-				return
-			}
-			workers = append(workers, messages.Worker{Id: string(m.Payload()), Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}})
-
-			t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true, "true")
-			t.Wait()
-
-			setMessageHandler(len(workers) - 1)
-		} else {
-			id := 0
-			for i := 0; i < len(workers); i++ {
-				if workers[i].Id == string(m.Payload()) {
-					id = i
-					break
-				}
-			}
-			workers[id].Status = true
-			setMessageHandler(id)
-		}
-	})
+	token = client.Subscribe("Orquestrator/Login", byte(1), Login)
 	token.Wait()
 
-	token = client.Subscribe("Orquestrator/Ping", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		id := 0
-		for i := 0; i < len(workers); i++ {
-			if workers[i].Id == string(m.Payload()) {
-				workers[i].Status = true
-				id = i
-				break
-			}
-		}
-		if workers[id].TestPing {
-			workers[id].TestPing = false
-			go watcher(id, t_interval)
-		} else {
-			workers[id].TestPing = true
-			go watcher(id, t_interval)
-			workers[id].TestPing = false
-		}
-	})
-
+	token = client.Subscribe("Orquestrator/Ping", byte(1), func(c mqtt.Client, m mqtt.Message) { Ping(c, m, t_interval) })
 	token.Wait()
 
 	return nil
