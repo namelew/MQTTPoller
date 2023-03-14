@@ -27,7 +27,6 @@ func Connect(l *logs.Log) {
 		&models.ExperimentDeclaration{},
 		&models.ExperimentStatus{},
 		&models.Worker{},
-		&models.WorkerStatus{},
 	)
 
 	if err != nil {

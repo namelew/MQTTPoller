@@ -2,6 +2,7 @@ package workers
 
 import (
 	"github.com/namelew/mqtt-bm-latency/databases"
+	"github.com/namelew/mqtt-bm-latency/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/databases/models"
 	"github.com/namelew/mqtt-bm-latency/logs"
 )
@@ -20,15 +21,7 @@ func (h *Workers) Add(w models.Worker) {
 	cerr := make(chan error, 1)
 
 	go func(worker *models.Worker) {
-		err := (databases.DB.Create(worker)).Error
-
-		if err != nil {
-			cerr <- err
-		}
-
-		err = (databases.DB.Create(&models.WorkerStatus{WorkerID: uint64(worker.ID), Online: true, Error: ""})).Error
-
-		cerr <- err
+		cerr <- (databases.DB.Create(worker)).Error
 	}(&w)
 
 	err := <-cerr
@@ -72,11 +65,15 @@ func (h *Workers) Update(id uint, new models.Worker) {
 	}
 }
 
-func (h *Workers) ChangeStatus(id uint64, new models.WorkerStatus) {
+func (h *Workers) ChangeStatus(id uint64, new filters.Worker) {
 	cerr := make(chan error, 1)
 
 	go func() {
-		cerr <- (databases.DB.Where(&models.WorkerStatus{WorkerID: id}).UpdateColumns(new)).Error
+		worker := models.Worker{
+			Online: new.Online,
+			Error:  new.Error,
+		}
+		cerr <- (databases.DB.Where(&models.Worker{WorkerID: id}).UpdateColumns(worker)).Error
 	}()
 
 	err := <-cerr
@@ -86,7 +83,7 @@ func (h *Workers) ChangeStatus(id uint64, new models.WorkerStatus) {
 	}
 }
 
-func (h *Workers) List(filter *models.Worker) []models.Worker {
+func (h *Workers) List(filter *filters.Worker) []models.Worker {
 	var workers []models.Worker
 
 	if filter != nil {

@@ -11,6 +11,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/databases"
+	"github.com/namelew/mqtt-bm-latency/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/databases/models"
 	seworkers "github.com/namelew/mqtt-bm-latency/databases/services/workers"
 	"github.com/namelew/mqtt-bm-latency/input"
@@ -101,8 +102,8 @@ func Init(broker string, t_interval int) error {
 	token.Wait()
 
 	token = client.Subscribe("Orquestrator/Login", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		w := (serviceWorkers.List(&models.Worker{Token: string(m.Payload())}))[0]
-		serviceWorkers.ChangeStatus(uint64(w.ID), models.WorkerStatus{Online: true})
+		w := (serviceWorkers.List(&filters.Worker{Token: string(m.Payload())}))[0]
+		serviceWorkers.ChangeStatus(uint64(w.ID), filters.Worker{Online: true})
 
 		oLog.Register("worker " + string(m.Payload()) + " loged")
 		if !utils.IsIn(workers, string(m.Payload())) {
