@@ -10,7 +10,7 @@ type History struct {
 }
 
 type Register interface {
-	models.Experiment | models.ExperimentResult | models.ExperimentStatus | models.ExperimentDeclaration
+	models.Experiment | models.ExperimentResult | models.ExperimentDeclaration
 }
 
 func Build(l *logs.Log) *History {

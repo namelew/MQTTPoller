@@ -1,19 +1,15 @@
 package models
 
-import "gorm.io/gorm"
+import "time"
 
 type Experiment struct {
-	gorm.Model
+	ID                      uint64 `gorm:"primarykey"`
 	ExperimentDeclarationID uint64
-	LogLevel                uint8
-	ToleranceLevel          uint8
+	Finish                  bool
+	Error                   string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 	Workers                 []*Worker `gorm:"many2many:experiments_workers;"`
-}
-
-type ExperimentStatus struct {
-	ExperimentID uint64
-	Finish       bool
-	Status       string
 }
 
 type ExperimentDeclaration struct {

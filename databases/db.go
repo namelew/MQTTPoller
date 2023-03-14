@@ -25,7 +25,6 @@ func Connect(l *logs.Log) {
 		&models.ExperimentResultPerSecondThrouput{},
 		&models.Info{},
 		&models.ExperimentDeclaration{},
-		&models.ExperimentStatus{},
 		&models.Worker{},
 	)
 
