@@ -4,6 +4,7 @@ services:
     container_name: mosquitto_broker
     image: eclipse-mosquitto:latest
     volumes:
+     - ./mosquitto.confg:/mosquitto/config/mosquitto.conf
      - mosquitto_data:/mosquitto
     networks:
      - example_experiment_network
@@ -15,6 +16,14 @@ services:
         - golang:1.18-alpine
         - alpine:3.17
     image: mqttdb/orquestrator:latest
+    deploy:
+      resources:
+        limits:
+          #cpus: '0.40'
+          memory: 30M
+        reservations:
+          #cpus: '0.30'
+          memory: 10M
     ports:
       - 8000:8000
     networks:
@@ -32,6 +41,14 @@ services:
         - golang:1.17.13-alpine
         - alpine:3.17
     image: mqttdb/worker:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 30M
+        reservations:
+          cpus: '0.20'
+          memory: 10M
     networks:
      - example_experiment_network
     environment:
