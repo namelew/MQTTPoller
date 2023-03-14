@@ -9,6 +9,9 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/databases"
+	"github.com/namelew/mqtt-bm-latency/databases/filters"
+	"github.com/namelew/mqtt-bm-latency/databases/models"
+	"github.com/namelew/mqtt-bm-latency/databases/services/experiments"
 	seworkers "github.com/namelew/mqtt-bm-latency/databases/services/workers"
 	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/logs"
@@ -18,6 +21,7 @@ import (
 
 var oLog = logs.Build("orquestrator.log")
 var serviceWorkers = seworkers.Build(oLog)
+var serviceExperiments = experiments.Build(oLog)
 var infos = make([]output.Info, 0, 10)
 var workers = make([]messages.Worker, 1, 10)
 var rexp []output.ExperimentResult
@@ -27,9 +31,8 @@ var waitQueue []output.ExperimentResult
 var expWG sync.WaitGroup
 var client mqtt.Client
 
-func GetWorkers() []messages.Worker {
-	log.Println(serviceWorkers.List(nil))
-	return workers
+func GetWorkers(filter *filters.Worker) []models.Worker {
+	return serviceWorkers.List(filter)
 }
 
 func Init(broker string, t_interval int) error {
@@ -83,13 +86,13 @@ func End() {
 	oLog.Register("shutdown")
 }
 
-func setMessageHandler(id int) {
-	token := client.Subscribe(workers[id].Id+"/Experiments/Results", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		messageHandlerExperiment(m, id)
+func setMessageHandler(t *string) {
+	token := client.Subscribe(*t+"/Experiments/Results", byte(1), func(c mqtt.Client, m mqtt.Message) {
+		messageHandlerExperiment(m)
 	})
 	token.Wait()
-	token = client.Subscribe(workers[id].Id+"/Experiments/Status", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		messageHandlerExperimentStatus(m, id)
+	token = client.Subscribe(*t+"/Experiments/Status", byte(1), func(c mqtt.Client, m mqtt.Message) {
+		messageHandlerExperimentStatus(m)
 	})
 	token.Wait()
 }

@@ -1,11 +1,12 @@
 package experiments
 
 import (
+	"github.com/namelew/mqtt-bm-latency/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/databases/models"
 	"github.com/namelew/mqtt-bm-latency/logs"
 )
 
-type History struct {
+type Experiments struct {
 	log *logs.Log
 }
 
@@ -13,27 +14,27 @@ type Register interface {
 	models.Experiment | models.ExperimentResult | models.ExperimentDeclaration
 }
 
-func Build(l *logs.Log) *History {
-	return &History{
+func Build(l *logs.Log) *Experiments {
+	return &Experiments{
 		log: l,
 	}
 }
 
-func (h *History) Add() {
+func (h *Experiments) Add() {
 }
 
-func (h *History) Remove() {
-
-}
-
-func (h *History) Update() {
+func (h *Experiments) Remove() {
 
 }
 
-func (h *History) List() {
+func (h *Experiments) Update(key filters.Experiment, new models.Experiment) {
 
 }
 
-func (h *History) Get() {
+func (h *Experiments) List() {
 
+}
+
+func (h *Experiments) Get(filter filters.Experiment) models.Experiment {
+	return models.Experiment{}
 }

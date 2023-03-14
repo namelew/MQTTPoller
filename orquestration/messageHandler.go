@@ -14,7 +14,6 @@ import (
 	"github.com/namelew/mqtt-bm-latency/databases/models"
 	"github.com/namelew/mqtt-bm-latency/messages"
 	"github.com/namelew/mqtt-bm-latency/output"
-	"github.com/namelew/mqtt-bm-latency/utils"
 )
 
 func Register(c mqtt.Client, m mqtt.Message) {
@@ -28,58 +27,26 @@ func Register(c mqtt.Client, m mqtt.Message) {
 		clientID += fmt.Sprintf("%d", random.Int()%10)
 	}
 
+	go serviceWorkers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: true, Experiments: nil})
+
+	setMessageHandler(&clientID)
+
 	oLog.Register("worker " + clientID + " registed")
-
-	serviceWorkers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Experiments: nil})
-
-	if workers[0].Id == "" {
-		workers[0] = messages.Worker{Id: clientID, Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
-
-		t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
-		t.Wait()
-
-		setMessageHandler(0)
-		return
-	}
-	workers = append(workers, messages.Worker{Id: clientID, Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}})
 
 	t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
 	t.Wait()
-
-	setMessageHandler(len(workers) - 1)
 }
 
 func Login(c mqtt.Client, m mqtt.Message) {
-	serviceWorkers.ChangeStatus(&filters.Worker{Token: string(m.Payload()), Online: true})
+	token := string(m.Payload())
+	go serviceWorkers.ChangeStatus(&filters.Worker{Token: token, Online: true})
 
-	oLog.Register("worker " + string(m.Payload()) + " loged")
-	if !utils.IsIn(workers, string(m.Payload())) {
-		if workers[0].Id == "" {
-			workers[0] = messages.Worker{Id: string(m.Payload()), Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}}
+	oLog.Register("worker " + token + " loged")
 
-			t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true, "true")
-			t.Wait()
+	setMessageHandler(&token)
 
-			setMessageHandler(0)
-			return
-		}
-		workers = append(workers, messages.Worker{Id: string(m.Payload()), Status: true, ReceiveConfirmation: false, TestPing: true, Historic: messages.ExperimentHistory{}})
-
-		t := client.Publish(string(m.Payload())+"/Login/Log", byte(1), true, "true")
-		t.Wait()
-
-		setMessageHandler(len(workers) - 1)
-	} else {
-		id := 0
-		for i := 0; i < len(workers); i++ {
-			if workers[i].Id == string(m.Payload()) {
-				id = i
-				break
-			}
-		}
-		workers[id].Status = true
-		setMessageHandler(id)
-	}
+	t := client.Publish(token+"/Login/Log", byte(1), true, "true")
+	t.Wait()
 }
 
 func Ping(c mqtt.Client, m mqtt.Message, t int) {
@@ -101,32 +68,34 @@ func Ping(c mqtt.Client, m mqtt.Message, t int) {
 	}
 }
 
-func messageHandlerExperimentStatus(msg mqtt.Message, id int) {
+func messageHandlerExperimentStatus(msg mqtt.Message) {
 	var exps messages.Status
 	json.Unmarshal(msg.Payload(), &exps)
 
 	tokens := strings.Split(exps.Type, " ")
 	expid, _ := strconv.Atoi(tokens[2])
 
-	exp := workers[id].Historic.Search(int64(expid))
+	exp := serviceExperiments.Get(filters.Experiment{ExperimentID: uint64(expid)})
 
 	switch exps.Status {
 	case "start":
 		return
 	case "finish":
-		if exp != nil {
-			exp.Finished = true
+		if exp.ID != 0 {
+			exp.Finish = true
+			go serviceExperiments.Update(filters.Experiment{ExperimentID: uint64(expid)}, exp)
 		}
 	default:
-		if exp != nil {
-			exp.Finished = true
-			exp.Err = true
-			redoExperiment(id, exp)
+		if exp.ID != 0 {
+			exp.Finish = true
+			exp.Error = exps.Status
+			go serviceExperiments.Update(filters.Experiment{ExperimentID: uint64(expid)}, exp)
+			//redoExperiment(id, exp)
 		}
 	}
 }
 
-func messageHandlerExperiment(m mqtt.Message, id int) {
+func messageHandlerExperiment(m mqtt.Message) {
 	var output output.ExperimentResult
 
 	err := json.Unmarshal(m.Payload(), &output)
@@ -135,22 +104,22 @@ func messageHandlerExperiment(m mqtt.Message, id int) {
 		log.Fatal(err.Error())
 	}
 
-	worker := workers[id].Historic.FindLarger()
+	// worker :=  workers[id].Historic.FindLarger()
 
-	if worker == nil {
-		waitQueueMutex.Lock()
-		waitQueue = append(waitQueue, output)
-		waitQueueMutex.Unlock()
-	} else {
-		worker.Finished = true
+	// if worker == nil {
+	// 	waitQueueMutex.Lock()
+	// 	waitQueue = append(waitQueue, output)
+	// 	waitQueueMutex.Unlock()
+	// } else {
+	// 	worker.Finished = true
 
-		rexpMutex.Lock()
-		rexp = append(rexp, output)
-		rexpMutex.Unlock()
-		workers[id].ReceiveConfirmation = true
-	}
+	// 	rexpMutex.Lock()
+	// 	rexp = append(rexp, output)
+	// 	rexpMutex.Unlock()
+	// 	workers[id].ReceiveConfirmation = true
+	// }
 
-	log.Printf("Experiment %d in worker %d return\n", output.Meta.ID, id)
+	// log.Printf("Experiment %d in worker %d return\n", output.Meta.ID, id)
 }
 
 func messageHandlerInfos(m mqtt.Message, id int) {
