@@ -87,7 +87,12 @@ func (h *Workers) List(filter *filters.Worker) []models.Worker {
 	var workers []models.Worker
 
 	if filter != nil {
-		if err := (databases.DB.Where(filter).Find(&workers)).Error; err != nil {
+		if err := (databases.DB.Where(&models.Worker{
+			WorkerID: filter.WorkerID,
+			Token:    filter.Token,
+			Online:   filter.Online,
+			Error:    filter.Error,
+		}).Find(&workers)).Error; err != nil {
 			h.log.Fatal("Unable to find matched workers")
 		}
 	} else {

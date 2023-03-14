@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
 	"flag"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var (
-		port     = flag.String("port", "8000", "api default port")
+		port       = flag.String("port", "8000", "api default port")
 		broker     = flag.String("broker", "tcp://localhost:1883", "broker url to worker/orquestrator communication")
 		t_interval = flag.Int("tl", 5, "orquestrator tolerance interval")
 	)
@@ -37,13 +37,14 @@ func main() {
 	}()
 
 	api := echo.New()
-	
+
 	api.GET("/orquestrator/worker", controllers.GetWorker)
+	api.GET("/orquestrator/worker/:id", controllers.GetWorker)
 	api.GET("/orquestrator/info", controllers.GetInfo)
 	api.POST("/orquestrator/experiment/start", controllers.StartExperiment)
 	api.DELETE("/orquestrator/experiment/cancel/:id/:expid", controllers.CancelExperiment)
 
-	api.Logger.Fatal(api.Start(":"+*port))
+	api.Logger.Fatal(api.Start(":" + *port))
 
 	orquestration.End()
 }
