@@ -2,13 +2,15 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/controllers"
+	"github.com/namelew/mqtt-bm-latency/logs"
+	"github.com/namelew/mqtt-bm-latency/network/mqtt"
 	"github.com/namelew/mqtt-bm-latency/orquestration"
 )
 
@@ -20,10 +22,20 @@ func main() {
 	)
 	flag.Parse()
 
-	err := orquestration.Init(*broker, *t_interval)
+	var oLog = logs.Build("orquestrator.log")
+	oLog.Create()
+
+	orquestrator := orquestration.Build(&mqtt.Client{
+		Broker: *broker,
+		ID:     "Orquestrator",
+		KA:     time.Second * 1000,
+		Log:    oLog,
+	}, *t_interval)
+
+	err := orquestrator.Init()
 
 	if err != nil {
-		log.Fatal(err.Error())
+		oLog.Fatal(err.Error())
 	}
 
 	c := make(chan os.Signal, 1)
@@ -32,19 +44,21 @@ func main() {
 
 	go func() {
 		<-c
-		orquestration.End()
+		orquestrator.End()
 		os.Exit(1)
 	}()
 
 	api := echo.New()
 
-	api.GET("/orquestrator/worker", controllers.GetWorker)
-	api.GET("/orquestrator/worker/:id", controllers.GetWorker)
-	api.GET("/orquestrator/info", controllers.GetInfo)
-	api.POST("/orquestrator/experiment/start", controllers.StartExperiment)
-	api.DELETE("/orquestrator/experiment/cancel/:id/:expid", controllers.CancelExperiment)
+	controller := controllers.Build(orquestrator)
+
+	api.GET("/orquestrator/worker", controller.List)
+	api.GET("/orquestrator/worker/:id", controller.Get)
+	api.GET("/orquestrator/info", controller.List)
+	api.POST("/orquestrator/experiment/start", controller.Procedure)
+	api.DELETE("/orquestrator/experiment/cancel/:id/:expid", controller.Procedure)
 
 	api.Logger.Fatal(api.Start(":" + *port))
 
-	orquestration.End()
+	orquestrator.End()
 }

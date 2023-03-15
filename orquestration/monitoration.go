@@ -1,91 +1,81 @@
 package orquestration
 
-import (
-	"encoding/json"
-	"log"
-	"math/rand"
-	"time"
+// func receiveControl(id int, timeout int) {
+// 	var start int64 = time.Now().UnixMilli()
+// 	exlog := workers[id].Historic.FindLarger()
+// 	for utils.AbsInt(int(time.Now().UnixMilli()-start)) < (timeout * 1000) {
+// 		if workers[id].ReceiveConfirmation || !workers[id].Status || exlog.Err {
+// 			break
+// 		}
+// 	}
 
-	"github.com/namelew/mqtt-bm-latency/messages"
-	"github.com/namelew/mqtt-bm-latency/utils"
-)
+// 	workers[id].ReceiveConfirmation = false
+// 	expWG.Done()
 
-func receiveControl(id int, timeout int) {
-	var start int64 = time.Now().UnixMilli()
-	exlog := workers[id].Historic.FindLarger()
-	for utils.AbsInt(int(time.Now().UnixMilli()-start)) < (timeout * 1000) {
-		if workers[id].ReceiveConfirmation || !workers[id].Status || exlog.Err {
-			break
-		}
-	}
+// 	if (timeout*1000) <= utils.AbsInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || exlog.Err {
+// 		log.Printf("Error in worker %d: experiment don't return\n", id)
+// 		exlog.Finished = true
+// 		redoExperiment(id, exlog)
+// 	}
+// }
 
-	workers[id].ReceiveConfirmation = false
-	expWG.Done()
+// func watcher(id int, tl int) {
+// 	var start int64 = time.Now().UnixMilli()
 
-	if (timeout*1000) <= utils.AbsInt(int(time.Now().UnixMilli()-start)) || !workers[id].Status || exlog.Err {
-		log.Printf("Error in worker %d: experiment don't return\n", id)
-		exlog.Finished = true
-		redoExperiment(id, exlog)
-	}
-}
+// 	for utils.AbsInt(int(time.Now().UnixMilli()-start)) < (tl * 1000) {
+// 		if workers[id].TestPing {
+// 			return
+// 		}
+// 	}
+// 	workers[id].Status = false
+// 	workers[id].TestPing = true
 
-func watcher(id int, tl int) {
-	var start int64 = time.Now().UnixMilli()
+// 	token := client.Unsubscribe(workers[id].Id + "/Experiments/Results")
+// 	token.Wait()
 
-	for utils.AbsInt(int(time.Now().UnixMilli()-start)) < (tl * 1000) {
-		if workers[id].TestPing {
-			return
-		}
-	}
-	workers[id].Status = false
-	workers[id].TestPing = true
+// 	log.Printf("Worker %d is off\n", id)
+// }
 
-	token := client.Unsubscribe(workers[id].Id + "/Experiments/Results")
-	token.Wait()
+// func redoExperiment(worker int, experiment *messages.ExperimentLog) {
+// 	exp := *experiment
+// 	workers[worker].Historic.Remove(experiment.Id)
 
-	log.Printf("Worker %d is off\n", id)
-}
+// 	if len(workers) <= 1 {
+// 		return
+// 	}
 
-func redoExperiment(worker int, experiment *messages.ExperimentLog) {
-	exp := *experiment
-	workers[worker].Historic.Remove(experiment.Id)
+// 	if exp.Attempts > 0 {
+// 		exp.Attempts--
+// 		size := len(workers)
+// 		var sample = make([]int, 0, size)
+// 		var timeout int
 
-	if len(workers) <= 1 {
-		return
-	}
+// 		for i := 0; i < size; i++ {
+// 			if i != worker && workers[i].Status {
+// 				sample = append(sample, i)
+// 			}
+// 		}
 
-	if exp.Attempts > 0 {
-		exp.Attempts--
-		size := len(workers)
-		var sample = make([]int, 0, size)
-		var timeout int
+// 		cmdExp := exp.Cmd.ToCommandExperiment()
+// 		exp.Id = time.Now().Unix()
+// 		cmdExp.Expid = exp.Id
+// 		cmdExp.Attempts = exp.Attempts
+// 		timeout = cmdExp.ExecTime * 5 * 2
+// 		cmdExp.Attach(&exp.Cmd)
 
-		for i := 0; i < size; i++ {
-			if i != worker && workers[i].Status {
-				sample = append(sample, i)
-			}
-		}
+// 		nw := sample[rand.Intn(len(sample))]
 
-		cmdExp := exp.Cmd.ToCommandExperiment()
-		exp.Id = time.Now().Unix()
-		cmdExp.Expid = exp.Id
-		cmdExp.Attempts = exp.Attempts
-		timeout = cmdExp.ExecTime * 5 * 2
-		cmdExp.Attach(&exp.Cmd)
+// 		msg, err := json.Marshal(exp.Cmd)
 
-		nw := sample[rand.Intn(len(sample))]
+// 		if err != nil {
+// 			log.Fatal(err.Error())
+// 		}
 
-		msg, err := json.Marshal(exp.Cmd)
+// 		workers[nw].Historic.Add(exp.Id, exp.Cmd, exp.Attempts)
 
-		if err != nil {
-			log.Fatal(err.Error())
-		}
+// 		token := client.Publish(workers[nw].Id+"/Command", byte(1), false, msg)
+// 		token.Wait()
 
-		workers[nw].Historic.Add(exp.Id, exp.Cmd, exp.Attempts)
-
-		token := client.Publish(workers[nw].Id+"/Command", byte(1), false, msg)
-		token.Wait()
-
-		go receiveControl(nw, timeout)
-	}
-}
+// 		go receiveControl(nw, timeout)
+// 	}
+// }

@@ -2,7 +2,8 @@ package orquestration
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
+	"math/rand"
 	"strconv"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/logs"
 	"github.com/namelew/mqtt-bm-latency/messages"
+	nmqtt "github.com/namelew/mqtt-bm-latency/network/mqtt"
 	"github.com/namelew/mqtt-bm-latency/output"
 )
 
@@ -29,79 +31,95 @@ var rexpMutex sync.Mutex
 var waitQueueMutex sync.Mutex
 var waitQueue []output.ExperimentResult
 var expWG sync.WaitGroup
-var client mqtt.Client
 
-func ListWorkers(filter *filters.Worker) []models.Worker {
+type Orquestrator struct {
+	log         *logs.Log
+	workers     *seworkers.Workers
+	experiments *experiments.Experiments
+	client      *nmqtt.Client
+	tolerance   int
+}
+
+func Build(c *nmqtt.Client, t int) *Orquestrator {
+	return &Orquestrator{
+		log:         c.Log,
+		workers:     seworkers.Build(c.Log),
+		experiments: experiments.Build(c.Log),
+		client:      c,
+		tolerance:   t,
+	}
+}
+
+func (o Orquestrator) ListWorkers(filter *filters.Worker) []models.Worker {
 	return serviceWorkers.List(filter)
 }
 
-func GetWorker(id int) *models.Worker {
+func (o Orquestrator) GetWorker(id int) *models.Worker {
 	return serviceWorkers.Get(id)
 }
 
-func Init(broker string, t_interval int) error {
-	var clientID string = "Orquestrator"
-	ka, err := time.ParseDuration(strconv.Itoa(10000) + "s")
+func (o Orquestrator) Init() error {
+	o.client.Create()
 
-	if err != nil {
-		return err
-	}
+	o.log.Register("Starting database")
 
-	oLog.Create()
+	databases.Connect(o.log)
 
-	opts := mqtt.NewClientOptions().
-		AddBroker(broker).
-		SetClientID(clientID).
-		SetCleanSession(true).
-		SetAutoReconnect(true).
-		SetKeepAlive(ka).
-		SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {}).
-		SetConnectionLostHandler(func(client mqtt.Client, reason error) {})
+	o.client.Register("Orquestrator/Register", 1, func(c mqtt.Client, m mqtt.Message) {
+		var clientID string = ""
+		var seed rand.Source
+		var random *rand.Rand
 
-	client = mqtt.NewClient(opts)
+		for i := 0; i < 10; i++ {
+			seed = rand.NewSource(time.Now().UnixNano())
+			random = rand.New(seed)
+			clientID += fmt.Sprintf("%d", random.Int()%10)
+		}
 
-	oLog.Register("connect paho mqtt client to broker " + broker)
+		go serviceWorkers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: true, Experiments: nil})
 
-	tokenConnection := client.Connect()
+		o.setMessageHandler(&clientID)
 
-	tokenConnection.Wait()
+		o.log.Register("worker " + clientID + " registed")
 
-	oLog.Register("Starting database")
+		o.client.Send("Orquestrator/Register/Log", string(m.Payload())+"-"+clientID)
+	})
 
-	databases.Connect(oLog)
+	o.client.Register("Orquestrator/Login", 1, func(c mqtt.Client, m mqtt.Message) {
+		token := string(m.Payload())
+		go serviceWorkers.ChangeStatus(&filters.Worker{Token: token, Online: true})
 
-	token := client.Subscribe("Orquestrator/Register", byte(1), Register)
-	token.Wait()
+		o.log.Register("worker " + token + " loged")
 
-	token = client.Subscribe("Orquestrator/Login", byte(1), Login)
-	token.Wait()
+		o.setMessageHandler(&token)
 
-	token = client.Subscribe("Orquestrator/Ping", byte(1), func(c mqtt.Client, m mqtt.Message) { Ping(c, m, t_interval) })
-	token.Wait()
+		o.client.Send(token+"/Login/Log", "true")
+	})
+
+	o.client.Register("Orquestrator/Ping", 1, func(c mqtt.Client, m mqtt.Message) { Ping(c, m, o.tolerance) })
 
 	return nil
 }
 
-func End() {
-	oLog.Register("disconnect mqtt.client")
+func (o Orquestrator) End() {
+	o.log.Register("disconnect mqtt.client")
 
-	client.Disconnect(0)
+	o.client.Disconnect(0)
 
-	oLog.Register("shutdown")
+	o.log.Register("shutdown")
 }
 
-func setMessageHandler(t *string) {
-	token := client.Subscribe(*t+"/Experiments/Results", byte(1), func(c mqtt.Client, m mqtt.Message) {
+func (o Orquestrator) setMessageHandler(t *string) {
+	o.client.Register(*t+"/Experiments/Results", 1, func(c mqtt.Client, m mqtt.Message) {
 		messageHandlerExperiment(m)
 	})
-	token.Wait()
-	token = client.Subscribe(*t+"/Experiments/Status", byte(1), func(c mqtt.Client, m mqtt.Message) {
+
+	o.client.Register(*t+"/Experiments/Status", 1, func(c mqtt.Client, m mqtt.Message) {
 		messageHandlerExperimentStatus(m)
 	})
-	token.Wait()
 }
 
-func StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
+func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
 	expid := time.Now().Unix()
 
 	rexpMutex.Lock()
@@ -161,18 +179,17 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
 		expWG.Add(nw)
 		for i := 0; i < nw; i++ {
 			if !workers[i].Status {
-				log.Printf("Worker %d is off, skipping\n", i)
+				o.log.Register("Worker " + strconv.Itoa(i) + " is off, skipping")
 				continue
 			}
 
 			workers[i].Historic.Add(expid, cmd, arg.Description.Attempts)
 
-			token := client.Publish(workers[i].Id+"/Command", byte(1), false, msg)
-			token.Wait()
+			o.client.Send(workers[i].Id+"/Command", msg)
 
-			go receiveControl(i, arg.Description.ExecTime*5)
+			// go receiveControl(i, arg.Description.ExecTime*5)
 
-			log.Printf("Requesting experiment in worker %d\n", i)
+			o.log.Register("Requesting experiment in worker " + strconv.Itoa(i))
 		}
 	} else {
 		argTam := len(arg.Id)
@@ -180,22 +197,21 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
 		for i := 0; i < argTam; i++ {
 			if !workers[arg.Id[i]].Status {
 				if argTam > 1 {
-					log.Printf("Worker %d is off, skipping\n", arg.Id[i])
+					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, skipping")
 					continue
 				} else {
-					log.Printf("Worker %d is off, aborting experiment\n", arg.Id[i])
+					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, aborting experiment")
 					break
 				}
 			}
 
 			workers[i].Historic.Add(expid, cmd, arg.Description.Attempts)
 
-			token := client.Publish(workers[arg.Id[i]].Id+"/Command", byte(1), false, msg)
-			token.Wait()
+			o.client.Send(workers[arg.Id[i]].Id+"/Command", msg)
 
-			go receiveControl(arg.Id[i], arg.Description.ExecTime*5)
+			// go receiveControl(arg.Id[i], arg.Description.ExecTime*5)
 
-			log.Printf("Requesting experiment in worker %d\n", arg.Id[i])
+			o.log.Register("Requesting experiment in worker " + strconv.Itoa(arg.Id[i]))
 		}
 	}
 
@@ -212,7 +228,7 @@ func StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
 	return rexp, nil
 }
 
-func CancelExperiment(id int, expid int64) error {
+func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 	arg := make(map[string]interface{})
 	arg["id"] = expid
 	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: arg}
@@ -222,8 +238,7 @@ func CancelExperiment(id int, expid int64) error {
 		return err
 	}
 
-	token := client.Publish(workers[id].Id+"/Command", byte(1), false, msg)
-	token.Wait()
+	o.client.Send(workers[id].Id+"/Command", msg)
 
 	workers[id].ReceiveConfirmation = true
 	exp := workers[id].Historic.Search(expid)
@@ -232,7 +247,7 @@ func CancelExperiment(id int, expid int64) error {
 	return nil
 }
 
-func GetInfo(arg input.Info) ([]output.Info, error) {
+func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
 	var infoCommand messages.Command
 	infos = nil
 
@@ -249,27 +264,24 @@ func GetInfo(arg input.Info) ([]output.Info, error) {
 	if arg.Id[0] == -1 {
 		for i := 0; i < len(workers); i++ {
 			if !workers[i].Status {
-				log.Printf("Worker %d isn't report, skipping\n", i)
+				o.log.Register("Worker " + strconv.Itoa(i) + " isn't report, skipping")
 				continue
 			}
-			token := client.Subscribe(workers[i].Id+"/Info", byte(1), func(c mqtt.Client, m mqtt.Message) {
+			o.client.Register(workers[i].Id+"/Info", 1, func(c mqtt.Client, m mqtt.Message) {
 				messageHandlerInfos(m, i)
 			})
-			token.Wait()
 
-			token = client.Publish(workers[i].Id+"/Command", byte(1), false, msg)
-			token.Wait()
+			o.client.Send(workers[i].Id+"/Command", msg)
 
 			for !workers[i].ReceiveConfirmation {
 				if !workers[i].Status {
-					log.Printf("Worker %d isn't report, skipping\n", i)
+					o.log.Register("Worker " + strconv.Itoa(i) + " isn't report, skipping")
 					break
 				}
 				time.Sleep(time.Second)
 			}
 			workers[i].ReceiveConfirmation = false
-			token = client.Unsubscribe(workers[i].Id + "/Info")
-			token.Wait()
+			o.client.Unregister(workers[i].Id + "/Info")
 		}
 	} else {
 		argTam := len(arg.Id)
@@ -277,36 +289,33 @@ func GetInfo(arg input.Info) ([]output.Info, error) {
 		for i := 0; i < argTam; i++ {
 			if !workers[arg.Id[i]].Status {
 				if argTam > 1 {
-					log.Printf("Worker %d is off, skipping\n", arg.Id[i])
+					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, skipping")
 					continue
 				} else {
-					log.Printf("Worker %d is off, aborting request\n", arg.Id[i])
+					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, aborting request")
 					break
 				}
 			}
 
-			token := client.Subscribe(workers[arg.Id[i]].Id+"/Info", byte(1), func(c mqtt.Client, m mqtt.Message) {
+			o.client.Register(workers[arg.Id[i]].Id+"/Info", 1, func(c mqtt.Client, m mqtt.Message) {
 				messageHandlerInfos(m, arg.Id[i])
 			})
-			token.Wait()
 
-			token = client.Publish(workers[arg.Id[i]].Id+"/Command", byte(1), false, msg)
-			token.Wait()
+			o.client.Send(workers[arg.Id[i]].Id+"/Command", msg)
 
 			for !workers[arg.Id[i]].ReceiveConfirmation {
 				if !workers[arg.Id[i]].Status {
 					if argTam > 1 {
-						log.Printf("Worker %d is off, skipping\n", arg.Id[i])
+						o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " isn't report, skipping")
 					} else {
-						log.Printf("Worker %d is off, aborting request\n", arg.Id[i])
+						o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, aborting request")
 					}
 					break
 				}
 				time.Sleep(time.Second)
 			}
 			workers[arg.Id[i]].ReceiveConfirmation = false
-			token = client.Unsubscribe(workers[i].Id + "/Info")
-			token.Wait()
+			o.client.Unregister(workers[i].Id + "/Info")
 		}
 	}
 

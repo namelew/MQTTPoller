@@ -2,52 +2,15 @@ package orquestration
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/databases/filters"
-	"github.com/namelew/mqtt-bm-latency/databases/models"
 	"github.com/namelew/mqtt-bm-latency/messages"
 	"github.com/namelew/mqtt-bm-latency/output"
 )
-
-func Register(c mqtt.Client, m mqtt.Message) {
-	var clientID string = ""
-	var seed rand.Source
-	var random *rand.Rand
-
-	for i := 0; i < 10; i++ {
-		seed = rand.NewSource(time.Now().UnixNano())
-		random = rand.New(seed)
-		clientID += fmt.Sprintf("%d", random.Int()%10)
-	}
-
-	go serviceWorkers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: true, Experiments: nil})
-
-	setMessageHandler(&clientID)
-
-	oLog.Register("worker " + clientID + " registed")
-
-	t := client.Publish("Orquestrator/Register/Log", byte(1), false, string(m.Payload())+"-"+clientID)
-	t.Wait()
-}
-
-func Login(c mqtt.Client, m mqtt.Message) {
-	token := string(m.Payload())
-	go serviceWorkers.ChangeStatus(&filters.Worker{Token: token, Online: true})
-
-	oLog.Register("worker " + token + " loged")
-
-	setMessageHandler(&token)
-
-	t := client.Publish(token+"/Login/Log", byte(1), true, "true")
-	t.Wait()
-}
 
 func Ping(c mqtt.Client, m mqtt.Message, t int) {
 	id := 0
@@ -60,10 +23,10 @@ func Ping(c mqtt.Client, m mqtt.Message, t int) {
 	}
 	if workers[id].TestPing {
 		workers[id].TestPing = false
-		go watcher(id, t)
+		//go watcher(id, t)
 	} else {
 		workers[id].TestPing = true
-		go watcher(id, t)
+		//go watcher(id, t)
 		workers[id].TestPing = false
 	}
 }
