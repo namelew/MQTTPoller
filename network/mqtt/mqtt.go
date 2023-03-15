@@ -36,10 +36,12 @@ func (c *Client) Create() {
 	c.client = client
 }
 
-func (c *Client) Register(from string, qos int, handler mqtt.MessageHandler) {
+func (c *Client) Register(from string, qos int, quiet bool, handler mqtt.MessageHandler) {
 	token := c.client.Subscribe(from, byte(qos), handler)
 	token.Wait()
-	c.Log.Register("Listen on topic " + from + " with qos " + strconv.Itoa(qos))
+	if !quiet {
+		c.Log.Register("Listen on topic " + from + " with qos " + strconv.Itoa(qos))
+	}
 }
 
 func (c *Client) Unregister(from ...string) {

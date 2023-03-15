@@ -1,6 +1,7 @@
 package orquestration
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -22,7 +23,6 @@ import (
 )
 
 var oLog = logs.Build("orquestrator.log")
-var serviceWorkers = seworkers.Build(oLog)
 var serviceExperiments = experiments.Build(oLog)
 var infos = make([]output.Info, 0, 10)
 var workers = make([]messages.Worker, 1, 10)
@@ -51,11 +51,38 @@ func Build(c *nmqtt.Client, t int) *Orquestrator {
 }
 
 func (o Orquestrator) ListWorkers(filter *filters.Worker) []models.Worker {
-	return serviceWorkers.List(filter)
+	return o.workers.List(filter)
 }
 
 func (o Orquestrator) GetWorker(id int) *models.Worker {
-	return serviceWorkers.Get(id)
+	return o.workers.Get(id)
+}
+
+func (o Orquestrator) timeout(token string, login bool) {
+	timer, cancel := context.WithCancel(context.Background())
+
+	o.client.Register(token+"/KeepAlive", 1, true, func(c mqtt.Client, m mqtt.Message) {
+		cancel()
+		o.workers.ChangeStatus(&filters.Worker{Token: string(m.Payload()), Online: true})
+		go o.timeout(string(m.Payload()), false)
+	})
+
+	tolerance := func(t int) int {
+		if login {
+			return t * 2
+		}
+		return t
+	}(o.tolerance)
+
+	go func(t context.Context, tk string, tl int) {
+		select {
+		case <-t.Done():
+			return
+		case <-time.After(time.Second * time.Duration(tl)):
+			go o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
+			o.log.Register("lost connection with worker " + tk)
+		}
+	}(timer, token, tolerance)
 }
 
 func (o Orquestrator) Init() error {
@@ -65,7 +92,7 @@ func (o Orquestrator) Init() error {
 
 	databases.Connect(o.log)
 
-	o.client.Register("Orquestrator/Register", 1, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register("Orquestrator/Register", 1, false, func(c mqtt.Client, m mqtt.Message) {
 		var clientID string = ""
 		var seed rand.Source
 		var random *rand.Rand
@@ -76,27 +103,29 @@ func (o Orquestrator) Init() error {
 			clientID += fmt.Sprintf("%d", random.Int()%10)
 		}
 
-		go serviceWorkers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: true, Experiments: nil})
+		go o.workers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: true, Experiments: nil})
 
 		o.setMessageHandler(&clientID)
 
 		o.log.Register("worker " + clientID + " registed")
 
 		o.client.Send("Orquestrator/Register/Log", string(m.Payload())+"-"+clientID)
+
+		go o.timeout(clientID, true)
 	})
 
-	o.client.Register("Orquestrator/Login", 1, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register("Orquestrator/Login", 1, false, func(c mqtt.Client, m mqtt.Message) {
 		token := string(m.Payload())
-		go serviceWorkers.ChangeStatus(&filters.Worker{Token: token, Online: true})
+		go o.workers.ChangeStatus(&filters.Worker{Token: token, Online: true})
 
 		o.log.Register("worker " + token + " loged")
 
 		o.setMessageHandler(&token)
 
 		o.client.Send(token+"/Login/Log", "true")
-	})
 
-	o.client.Register("Orquestrator/Ping", 1, func(c mqtt.Client, m mqtt.Message) { Ping(c, m, o.tolerance) })
+		go o.timeout(token, true)
+	})
 
 	return nil
 }
@@ -110,11 +139,11 @@ func (o Orquestrator) End() {
 }
 
 func (o Orquestrator) setMessageHandler(t *string) {
-	o.client.Register(*t+"/Experiments/Results", 1, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register(*t+"/Experiments/Results", 1, false, func(c mqtt.Client, m mqtt.Message) {
 		messageHandlerExperiment(m)
 	})
 
-	o.client.Register(*t+"/Experiments/Status", 1, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register(*t+"/Experiments/Status", 1, false, func(c mqtt.Client, m mqtt.Message) {
 		messageHandlerExperimentStatus(m)
 	})
 }
@@ -267,7 +296,7 @@ func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
 				o.log.Register("Worker " + strconv.Itoa(i) + " isn't report, skipping")
 				continue
 			}
-			o.client.Register(workers[i].Id+"/Info", 1, func(c mqtt.Client, m mqtt.Message) {
+			o.client.Register(workers[i].Id+"/Info", 1, true, func(c mqtt.Client, m mqtt.Message) {
 				messageHandlerInfos(m, i)
 			})
 
@@ -297,7 +326,7 @@ func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
 				}
 			}
 
-			o.client.Register(workers[arg.Id[i]].Id+"/Info", 1, func(c mqtt.Client, m mqtt.Message) {
+			o.client.Register(workers[arg.Id[i]].Id+"/Info", 1, true, func(c mqtt.Client, m mqtt.Message) {
 				messageHandlerInfos(m, arg.Id[i])
 			})
 
