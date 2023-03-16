@@ -63,7 +63,7 @@ func (o Orquestrator) timeout(token string, login bool) {
 
 	o.client.Register(token+"/KeepAlive", 1, true, func(c mqtt.Client, m mqtt.Message) {
 		cancel()
-		o.workers.ChangeStatus(&filters.Worker{Token: string(m.Payload()), Online: true})
+		go o.workers.ChangeStatus(&filters.Worker{Token: string(m.Payload()), Online: true})
 		go o.timeout(string(m.Payload()), false)
 	})
 

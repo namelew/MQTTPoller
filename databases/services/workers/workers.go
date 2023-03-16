@@ -1,6 +1,8 @@
 package workers
 
 import (
+	"log"
+
 	"github.com/namelew/mqtt-bm-latency/databases"
 	"github.com/namelew/mqtt-bm-latency/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/databases/models"
@@ -66,16 +68,17 @@ func (h *Workers) Update(id uint, new models.Worker) {
 }
 
 func (h *Workers) ChangeStatus(new *filters.Worker) {
-	cerr := make(chan error, 1)
+	var worker models.Worker
 
-	go func() {
-		cerr <- (databases.DB.Model(&models.Worker{}).Where("token = ?", new.Token).Update("online", new.Online)).Error
-	}()
+	if (databases.DB.Model(&models.Worker{Token: new.Token}).Find(&worker)).Error != nil || worker.ID == 0 {
+		h.log.Fatal("Update error, unable to find worker")
+	}
 
-	err := <-cerr
-
-	if err != nil {
-		h.log.Fatal("Unable to update worker status")
+	if worker.Online != new.Online {
+		log.Println(worker)
+		if (databases.DB.Model(&models.Worker{}).Where("id = ?", worker.ID).Update("online", new.Online)).Error != nil {
+			h.log.Fatal("Unable to update worker status")
+		}
 	}
 }
 
