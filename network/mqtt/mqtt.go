@@ -46,7 +46,8 @@ func (c *Client) Register(from string, qos int, quiet bool, handler mqtt.Message
 
 func (c *Client) Unregister(from ...string) {
 	for i := range from {
-		c.client.Unsubscribe(from[i])
+		token := c.client.Unsubscribe(from[i])
+		token.Wait()
 	}
 }
 

@@ -80,7 +80,8 @@ func (o Orquestrator) timeout(token string, login bool) {
 			return
 		case <-time.After(time.Second * time.Duration(tl)):
 			go o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
-			o.log.Register("lost connection with worker " + tk)
+			go o.client.Unregister(tk + "/KeepAlive")
+			go o.log.Register("lost connection with worker " + tk)
 		}
 	}(timer, token, tolerance)
 }
