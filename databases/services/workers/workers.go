@@ -69,11 +69,7 @@ func (h *Workers) ChangeStatus(new *filters.Worker) {
 	cerr := make(chan error, 1)
 
 	go func() {
-		worker := models.Worker{
-			Online: new.Online,
-			Error:  new.Error,
-		}
-		cerr <- (databases.DB.Model(&models.Worker{}).Where("token = ? or id = ?", new.Token, new.WorkerID).UpdateColumns(worker)).Error
+		cerr <- (databases.DB.Model(&models.Worker{}).Where("token = ?", new.Token).Update("online", new.Online)).Error
 	}()
 
 	err := <-cerr
