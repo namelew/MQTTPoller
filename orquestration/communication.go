@@ -63,7 +63,6 @@ func (o Orquestrator) timeout(token string, login bool) {
 
 	o.client.Register(token+"/KeepAlive", 1, true, func(c mqtt.Client, m mqtt.Message) {
 		cancel()
-		go o.workers.ChangeStatus(&filters.Worker{Token: string(m.Payload()), Online: true})
 		go o.timeout(string(m.Payload()), false)
 	})
 
@@ -79,9 +78,9 @@ func (o Orquestrator) timeout(token string, login bool) {
 		case <-t.Done():
 			return
 		case <-time.After(time.Second * time.Duration(tl)):
-			go o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
-			go o.client.Unregister(tk + "/KeepAlive")
-			go o.log.Register("lost connection with worker " + tk)
+			o.client.Unregister(tk + "/KeepAlive")
+			o.log.Register("lost connection with worker " + tk)
+			o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
 		}
 	}(timer, token, tolerance)
 }
@@ -94,38 +93,42 @@ func (o Orquestrator) Init() error {
 	databases.Connect(o.log)
 
 	o.client.Register("Orquestrator/Register", 1, false, func(c mqtt.Client, m mqtt.Message) {
-		var clientID string = ""
-		var seed rand.Source
-		var random *rand.Rand
+		go func(messagePayload []byte) {
+			var clientID string = ""
+			worker := string(messagePayload)
 
-		for i := 0; i < 10; i++ {
-			seed = rand.NewSource(time.Now().UnixNano())
-			random = rand.New(seed)
-			clientID += fmt.Sprintf("%d", random.Int()%10)
-		}
+			for i := 0; i < 10; i++ {
+				seed := rand.NewSource(time.Now().UnixNano())
+				random := rand.New(seed)
+				clientID += fmt.Sprintf("%d", random.Int()%10)
+			}
 
-		go o.workers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: true, Experiments: nil})
+			o.workers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: true, Experiments: nil})
 
-		o.setMessageHandler(&clientID)
+			o.setMessageHandler(&clientID)
 
-		o.log.Register("worker " + clientID + " registed")
+			o.log.Register("worker " + worker + " registed as " + clientID)
 
-		o.client.Send("Orquestrator/Register/Log", string(m.Payload())+"-"+clientID)
+			o.client.Send("Orquestrator/Register/Log", worker+"-"+clientID)
 
-		go o.timeout(clientID, true)
+			go o.timeout(clientID, true)
+		}(m.Payload())
 	})
 
 	o.client.Register("Orquestrator/Login", 1, false, func(c mqtt.Client, m mqtt.Message) {
-		token := string(m.Payload())
-		go o.workers.ChangeStatus(&filters.Worker{Token: token, Online: true})
+		go func(messagePayload []byte) {
+			token := string(messagePayload)
 
-		o.log.Register("worker " + token + " loged")
+			o.workers.ChangeStatus(&filters.Worker{Token: token, Online: true})
 
-		o.setMessageHandler(&token)
+			o.log.Register("worker " + token + " loged")
 
-		o.client.Send(token+"/Login/Log", "true")
+			o.setMessageHandler(&token)
 
-		go o.timeout(token, true)
+			o.client.Send(token+"/Login/Log", "true")
+
+			go o.timeout(token, true)
+		}(m.Payload())
 	})
 
 	return nil
