@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -159,6 +160,14 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 	rexp = nil
 	rexpMutex.Unlock()
 
+	o.experiments.Add(
+		models.Experiment{
+			Finish: false,
+		},
+		arg.Description,
+		arg.Id...,
+	)
+
 	var cmd messages.Command
 	var experiment messages.CommandExperiment
 
@@ -168,25 +177,25 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 	experiment.Expid = expid
 	experiment.Attempts = arg.Description.Attempts
 	experiment.Broker = arg.Description.Broker
-	experiment.ExecTime = arg.Description.ExecTime
-	experiment.Interval = arg.Description.Interval
+	experiment.ExecTime = int(arg.Description.ExecTime)
+	experiment.Interval = int(arg.Description.Interval)
 	experiment.LogLevel = arg.Description.LogLevel
-	experiment.MqttVersion = arg.Description.MqttVersion
+	experiment.MqttVersion = int(arg.Description.MqttVersion)
 	experiment.Ntp = arg.Description.Ntp
-	experiment.NumMessages = arg.Description.NumMessages
-	experiment.NumPublishers = arg.Description.NumPublishers
-	experiment.NumSubscriber = arg.Description.NumSubscriber
+	experiment.NumMessages = int(arg.Description.NumMessages)
+	experiment.NumPublishers = int(arg.Description.NumPublishers)
+	experiment.NumSubscriber = int(arg.Description.NumSubscriber)
 	experiment.Output = arg.Description.Output
 	experiment.Password = arg.Description.Password
-	experiment.Payload = arg.Description.Payload
-	experiment.Port = arg.Description.Port
-	experiment.QosPublisher = arg.Description.QosPublisher
-	experiment.QosSubscriber = arg.Description.QosSubscriber
+	experiment.Payload = int(arg.Description.Payload)
+	experiment.Port = int(arg.Description.Port)
+	experiment.QosPublisher = int(arg.Description.QosPublisher)
+	experiment.QosSubscriber = int(arg.Description.QosSubscriber)
 	experiment.RampDown = arg.Description.RampDown
 	experiment.RampUp = arg.Description.RampUp
 	experiment.Retain = arg.Description.Retain
 	experiment.SharedSubscrition = arg.Description.SharedSubscrition
-	experiment.SubscriberTimeout = arg.Description.SubscriberTimeout
+	experiment.SubscriberTimeout = int(arg.Description.SubscriberTimeout)
 	experiment.TlsKeystore = arg.Description.TlsKeystore
 	experiment.TlsKeystorePassword = arg.Description.TlsKeystorePassword
 	experiment.TlsTrustsore = arg.Description.TlsTrustsore
@@ -257,6 +266,8 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 
 	waitQueue = nil
 	waitQueueMutex.Unlock()
+
+	log.Println(o.experiments.List())
 
 	return rexp, nil
 }

@@ -20,15 +20,21 @@ func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, w
 	var wkrs []models.Worker
 	var declaration models.ExperimentDeclaration
 
-	if (databases.DB.Where("id IN ?", wid).Find(&wkrs)).Error != nil {
-		h.log.Fatal("Unable to find workers")
+	if len(wid) <= 0 || wid[0] == -1 {
+		if (databases.DB.Find(&wkrs)).Error != nil {
+			h.log.Fatal("Unable to find workers")
+		}
+	} else {
+		if (databases.DB.Where("id IN ?", wid).Find(&wkrs)).Error != nil {
+			h.log.Fatal("Unable to find workers")
+		}
 	}
 
-	if (databases.DB.Model(d).Find(&declaration)).Error != nil {
+	if (databases.DB.Model(&d).Find(&declaration)).Error != nil {
 		h.log.Fatal("Unable to query experiment declaration")
 	}
 
-	if declaration != d {
+	if declaration.ID == 0 {
 		if (databases.DB.Create(d)).Error != nil {
 			h.log.Fatal("Unable to create experiment declaration")
 		}
@@ -38,6 +44,7 @@ func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, w
 		e.Workers = append(e.Workers, &wkrs[i])
 	}
 
+	e.ExperimentDeclarationID = declaration.ID
 	e.ExperimentDeclaration = declaration
 
 	if (databases.DB.Create(e)).Error != nil {
