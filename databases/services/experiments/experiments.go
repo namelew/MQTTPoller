@@ -2,7 +2,6 @@ package experiments
 
 import (
 	"github.com/namelew/mqtt-bm-latency/databases"
-	"github.com/namelew/mqtt-bm-latency/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/databases/models"
 	"github.com/namelew/mqtt-bm-latency/logs"
 )
@@ -52,8 +51,16 @@ func (h *Experiments) Remove(id uint64) {
 	}
 }
 
-func (h *Experiments) Update(key filters.Experiment, new models.Experiment) {
+func (h *Experiments) Update(key uint64, new models.Experiment) {
+	var experiment models.Experiment
 
+	if err := (databases.DB.Model(&models.Experiment{}).Where("id = ?", key).Find(&experiment)).Error; err != nil || experiment.ID == 0 {
+		h.log.Fatal("Unable to find selected experiment")
+	}
+
+	if (databases.DB.Save(&experiment)).Error != nil {
+		h.log.Fatal("Unable to update experiment")
+	}
 }
 
 func (h *Experiments) List() []models.Experiment {

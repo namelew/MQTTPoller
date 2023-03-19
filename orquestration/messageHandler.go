@@ -7,29 +7,9 @@ import (
 	"strings"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/namelew/mqtt-bm-latency/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/messages"
 	"github.com/namelew/mqtt-bm-latency/output"
 )
-
-func Ping(c mqtt.Client, m mqtt.Message, t int) {
-	id := 0
-	for i := 0; i < len(workers); i++ {
-		if workers[i].Id == string(m.Payload()) {
-			workers[i].Status = true
-			id = i
-			break
-		}
-	}
-	if workers[id].TestPing {
-		workers[id].TestPing = false
-		//go watcher(id, t)
-	} else {
-		workers[id].TestPing = true
-		//go watcher(id, t)
-		workers[id].TestPing = false
-	}
-}
 
 func messageHandlerExperimentStatus(msg mqtt.Message) {
 	var exps messages.Status
@@ -46,13 +26,13 @@ func messageHandlerExperimentStatus(msg mqtt.Message) {
 	case "finish":
 		if exp.ID != 0 {
 			exp.Finish = true
-			go serviceExperiments.Update(filters.Experiment{ExperimentID: uint64(expid)}, exp)
+			go serviceExperiments.Update(uint64(expid), exp)
 		}
 	default:
 		if exp.ID != 0 {
 			exp.Finish = true
 			exp.Error = exps.Status
-			go serviceExperiments.Update(filters.Experiment{ExperimentID: uint64(expid)}, exp)
+			go serviceExperiments.Update(uint64(expid), exp)
 			//redoExperiment(id, exp)
 		}
 	}
