@@ -38,7 +38,7 @@ func messageHandlerExperimentStatus(msg mqtt.Message) {
 	tokens := strings.Split(exps.Type, " ")
 	expid, _ := strconv.Atoi(tokens[2])
 
-	exp := serviceExperiments.Get(filters.Experiment{ExperimentID: uint64(expid)})
+	exp := serviceExperiments.Get(uint64(expid))
 
 	switch exps.Status {
 	case "start":

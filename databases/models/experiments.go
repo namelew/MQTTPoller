@@ -9,7 +9,8 @@ type Experiment struct {
 	Error                   string
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
-	Workers                 []*Worker `gorm:"many2many:experiments_workers;"`
+	Workers                 []*Worker             `gorm:"many2many:experiments_workers;"`
+	ExperimentDeclaration   ExperimentDeclaration `gorm:"foreignKey:ExperimentDeclaration;references:ID"`
 }
 
 type ExperimentDeclaration struct {
@@ -69,4 +70,5 @@ type ExperimentResultPerSecondThrouput struct {
 	Time               uint64
 	Value              int
 	Action             string
+	ExperimentResult   ExperimentResult `gorm:"foreignKey:ExperimentResultID;references:ID"`
 }
