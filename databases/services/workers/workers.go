@@ -35,7 +35,7 @@ func (h *Workers) Remove(id uint) {
 	cerr := make(chan error, 1)
 
 	go func() {
-		cerr <- (databases.DB.Delete(&models.Worker{}, id)).Error
+		cerr <- (databases.DB.Model(&models.Worker{}).Where("id = ?", id).Delete(&models.Worker{})).Error
 	}()
 
 	err := <-cerr
