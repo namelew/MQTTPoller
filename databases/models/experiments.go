@@ -10,7 +10,7 @@ type Experiment struct {
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
 	Workers                 []*Worker             `gorm:"many2many:experiments_workers;"`
-	ExperimentDeclaration   ExperimentDeclaration `gorm:"foreignKey:ExperimentDeclaration;references:ID"`
+	ExperimentDeclaration   ExperimentDeclaration `gorm:"foreignKey:ExperimentDeclarationID;references:ID"`
 }
 
 type ExperimentDeclaration struct {
