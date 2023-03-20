@@ -15,60 +15,32 @@ type Experiment struct {
 
 type ExperimentDeclaration struct {
 	ID                    uint64 `gorm:"primarykey"`
-	Attempts              int
-	Tool                  string
-	Broker                string
-	Port                  uint
-	MqttVersion           uint8
-	NumPublishers         uint
-	NumSubscriber         uint
-	QosPublisher          uint8
-	QosSubscriber         uint8
-	SharedSubscrition     bool
-	Retain                bool
-	Topic                 string
-	Payload               uint64
-	NumMessages           uint
-	RampUp                int
-	RampDown              int
-	Interval              uint64
-	SubscriberTimeout     uint64
-	ExecTime              uint64
-	LogLevel              string
-	Ntp                   string
-	Output                bool
-	User                  string
-	Password              string
-	TlsTrustsore          string
-	TlsTruststorePassword string
-	TlsKeystore           string
-	TlsKeystorePassword   string
-}
-
-type ExperimentResult struct {
-	ID                  uint64 `gorm:"primarykey"`
-	ExperimentID        uint64
-	Error               string
-	Tool                string
-	Literal             string
-	Filename            string
-	FileData            []byte
-	FileExtension       string
-	SubThroughput       float64
-	SubAvgThroughput    float64
-	SubReceivedMessages uint
-	SubLatency          float64
-	SubAvgLatency       float64
-	PubThroughput       float64
-	PubAvgThroughput    float64
-	PubMessages         uint
-	Experiment          Experiment
-}
-
-type ExperimentResultPerSecondThrouput struct {
-	ExperimentResultID uint64
-	Time               uint64
-	Value              int
-	Action             string
-	ExperimentResult   ExperimentResult `gorm:"foreignKey:ExperimentResultID;references:ID"`
+	Attempts              int    `json:"attempts"`
+	Tool                  string `json:"tool"`
+	Broker                string `json:"broker"`
+	Port                  int    `json:"port"`
+	MqttVersion           int    `json:"mqttVersion"`
+	NumPublishers         int    `json:"numPublishers"`
+	NumSubscriber         int    `json:"numSubscribers"`
+	QosPublisher          int    `json:"qosPublisher"`
+	QosSubscriber         int    `json:"qosSubscriber"`
+	SharedSubscrition     bool   `json:"sharedSubscription"`
+	Retain                bool   `json:"retain"`
+	Topic                 string `json:"topic"`
+	Payload               int    `json:"payload"`
+	NumMessages           int    `json:"numMessages"`
+	RampUp                int    `json:"ramUp"`
+	RampDown              int    `json:"rampDown"`
+	Interval              int    `json:"interval"`
+	SubscriberTimeout     int    `json:"subscriberTimeout"`
+	ExecTime              int    `json:"execTime"`
+	LogLevel              string `json:"logLevel"`
+	Ntp                   string `json:"ntp"`
+	Output                bool   `json:"output"`
+	User                  string `json:"username"`
+	Password              string `json:"password"`
+	TlsTrustsore          string `json:"tlsTruststore"`
+	TlsTruststorePassword string `json:"tlsTruststorePass"`
+	TlsKeystore           string `json:"tlsKeystore"`
+	TlsKeystorePassword   string `json:"tlsKeystorePass"`
 }

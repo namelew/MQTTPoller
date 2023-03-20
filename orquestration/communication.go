@@ -1,6 +1,7 @@
 package orquestration
 
 import (
+	"strings"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -23,10 +24,8 @@ import (
 	"github.com/namelew/mqtt-bm-latency/output"
 )
 
-var oLog = logs.Build("orquestrator.log")
-var serviceExperiments = experiments.Build(oLog)
 var infos = make([]output.Info, 0, 10)
-var workers = make([]messages.Worker, 1, 10)
+var ws = make([]messages.Worker, 1, 10)
 var rexp []output.ExperimentResult
 var rexpMutex sync.Mutex
 var waitQueueMutex sync.Mutex
@@ -145,11 +144,52 @@ func (o Orquestrator) End() {
 
 func (o Orquestrator) setMessageHandler(t *string) {
 	o.client.Register(*t+"/Experiments/Results", 1, false, func(c mqtt.Client, m mqtt.Message) {
-		messageHandlerExperiment(m)
+		var output output.ExperimentResult
+
+		err := json.Unmarshal(m.Payload(), &output)
+
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		exp :=  o.experiments.Get(output.Meta.ID)
+
+		if exp.Finish {
+			waitQueueMutex.Lock()
+			waitQueue = append(waitQueue, output)
+			waitQueueMutex.Unlock()
+		} else {
+			o.experiments.Update(output.Meta.ID, models.Experiment{Finish: true})
+			rexpMutex.Lock()
+			rexp = append(rexp, output)
+			rexpMutex.Unlock()
+		}
+
+		log.Println(output)
 	})
 
 	o.client.Register(*t+"/Experiments/Status", 1, false, func(c mqtt.Client, m mqtt.Message) {
-		messageHandlerExperimentStatus(m)
+		var exps messages.Status
+		json.Unmarshal(m.Payload(), &exps)
+
+		tokens := strings.Split(exps.Type, " ")
+		expid, _ := strconv.Atoi(tokens[2])
+
+		exp := o.experiments.Get(uint64(expid))
+
+		switch exps.Status {
+		case "start":
+			return
+		case "finish":
+			if exp.ID != 0 {
+				go o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
+			}
+		default:
+			if exp.ID != 0 {
+				go o.experiments.Update(uint64(expid), models.Experiment{Finish: true, Error: exps.Status})
+				//redoExperiment(id, exp)
+			}
+		}
 	})
 }
 
@@ -159,14 +199,6 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 	rexpMutex.Lock()
 	rexp = nil
 	rexpMutex.Unlock()
-
-	o.experiments.Add(
-		models.Experiment{
-			Finish: false,
-		},
-		arg.Description,
-		arg.Id...,
-	)
 
 	var cmd messages.Command
 	var experiment messages.CommandExperiment
@@ -216,40 +248,43 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 		return rexp, err
 	}
 
+	o.experiments.Add(
+		models.Experiment{
+			Finish: false,
+		},
+		arg.Description,
+		arg.Id...,
+	)
+
 	if arg.Id[0] == -1 {
-		nw := len(workers)
-		expWG.Add(nw)
-		for i := 0; i < nw; i++ {
-			if !workers[i].Status {
+		workers := o.workers.List(nil)
+
+		for i := range workers {
+			if !workers[i].Online {
 				o.log.Register("Worker " + strconv.Itoa(i) + " is off, skipping")
 				continue
 			}
 
-			workers[i].Historic.Add(expid, cmd, arg.Description.Attempts)
-
-			o.client.Send(workers[i].Id+"/Command", msg)
+			o.client.Send(workers[i].Token+"/Command", msg)
 
 			// go receiveControl(i, arg.Description.ExecTime*5)
 
 			o.log.Register("Requesting experiment in worker " + strconv.Itoa(i))
 		}
 	} else {
-		argTam := len(arg.Id)
-		expWG.Add(argTam)
-		for i := 0; i < argTam; i++ {
-			if !workers[arg.Id[i]].Status {
-				if argTam > 1 {
-					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, skipping")
-					continue
-				} else {
-					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, aborting experiment")
-					break
-				}
+		workers := make([]*models.Worker, 10)
+
+		for _,i := range arg.Id {
+			workers = append(workers, o.workers.Get(i))
+		}
+
+
+		for i := range workers {
+			if !workers[i].Online {
+				o.log.Register("Worker " + strconv.Itoa(i) + " is off, skipping")
 			}
 
-			workers[i].Historic.Add(expid, cmd, arg.Description.Attempts)
-
-			o.client.Send(workers[arg.Id[i]].Id+"/Command", msg)
+			o.client.Send(workers[i].Token+"/Command", msg)
 
 			// go receiveControl(arg.Id[i], arg.Description.ExecTime*5)
 
@@ -272,21 +307,20 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 	return rexp, nil
 }
 
+// vai precisar de um join
 func (o Orquestrator) CancelExperiment(id int, expid int64) error {
-	arg := make(map[string]interface{})
-	arg["id"] = expid
-	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: arg}
+	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: make(map[string]interface{})}
 	msg, err := json.Marshal(cmd)
 
 	if err != nil {
 		return err
 	}
 
-	o.client.Send(workers[id].Id+"/Command", msg)
+	worker := o.workers.Get(id)
 
-	workers[id].ReceiveConfirmation = true
-	exp := workers[id].Historic.Search(expid)
-	exp.Finished = true
+	o.client.Send(worker.Token+"/Command", msg)
+
+	o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
 
 	return nil
 }
@@ -306,32 +340,32 @@ func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
 	}
 
 	if arg.Id[0] == -1 {
-		for i := 0; i < len(workers); i++ {
-			if !workers[i].Status {
+		for i := 0; i < len(ws); i++ {
+			if !ws[i].Status {
 				o.log.Register("Worker " + strconv.Itoa(i) + " isn't report, skipping")
 				continue
 			}
-			o.client.Register(workers[i].Id+"/Info", 1, true, func(c mqtt.Client, m mqtt.Message) {
+			o.client.Register(ws[i].Id+"/Info", 1, true, func(c mqtt.Client, m mqtt.Message) {
 				messageHandlerInfos(m, i)
 			})
 
-			o.client.Send(workers[i].Id+"/Command", msg)
+			o.client.Send(ws[i].Id+"/Command", msg)
 
-			for !workers[i].ReceiveConfirmation {
-				if !workers[i].Status {
+			for !ws[i].ReceiveConfirmation {
+				if !ws[i].Status {
 					o.log.Register("Worker " + strconv.Itoa(i) + " isn't report, skipping")
 					break
 				}
 				time.Sleep(time.Second)
 			}
-			workers[i].ReceiveConfirmation = false
-			o.client.Unregister(workers[i].Id + "/Info")
+			ws[i].ReceiveConfirmation = false
+			o.client.Unregister(ws[i].Id + "/Info")
 		}
 	} else {
 		argTam := len(arg.Id)
 
 		for i := 0; i < argTam; i++ {
-			if !workers[arg.Id[i]].Status {
+			if !ws[arg.Id[i]].Status {
 				if argTam > 1 {
 					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, skipping")
 					continue
@@ -341,14 +375,14 @@ func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
 				}
 			}
 
-			o.client.Register(workers[arg.Id[i]].Id+"/Info", 1, true, func(c mqtt.Client, m mqtt.Message) {
+			o.client.Register(ws[arg.Id[i]].Id+"/Info", 1, true, func(c mqtt.Client, m mqtt.Message) {
 				messageHandlerInfos(m, arg.Id[i])
 			})
 
-			o.client.Send(workers[arg.Id[i]].Id+"/Command", msg)
+			o.client.Send(ws[arg.Id[i]].Id+"/Command", msg)
 
-			for !workers[arg.Id[i]].ReceiveConfirmation {
-				if !workers[arg.Id[i]].Status {
+			for !ws[arg.Id[i]].ReceiveConfirmation {
+				if !ws[arg.Id[i]].Status {
 					if argTam > 1 {
 						o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " isn't report, skipping")
 					} else {
@@ -358,8 +392,8 @@ func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
 				}
 				time.Sleep(time.Second)
 			}
-			workers[arg.Id[i]].ReceiveConfirmation = false
-			o.client.Unregister(workers[i].Id + "/Info")
+			ws[arg.Id[i]].ReceiveConfirmation = false
+			o.client.Unregister(ws[i].Id + "/Info")
 		}
 	}
 

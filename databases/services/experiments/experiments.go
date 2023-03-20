@@ -18,9 +18,9 @@ func Build(l *logs.Log) *Experiments {
 
 func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, wid ...int) {
 	var wkrs []models.Worker
-	var declaration models.ExperimentDeclaration
+	var declaration,empty models.ExperimentDeclaration
 
-	if len(wid) <= 0 || wid[0] == -1 {
+	if len(wid) <= 1 || wid[0] == -1{
 		if (databases.DB.Find(&wkrs)).Error != nil {
 			h.log.Fatal("Unable to find workers")
 		}
@@ -34,8 +34,8 @@ func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, w
 		h.log.Fatal("Unable to query experiment declaration")
 	}
 
-	if declaration.ID == 0 {
-		if (databases.DB.Create(d)).Error != nil {
+	if declaration == empty {
+		if (databases.DB.Create(&d)).Error != nil {
 			h.log.Fatal("Unable to create experiment declaration")
 		}
 	}
@@ -47,7 +47,7 @@ func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, w
 	e.ExperimentDeclarationID = declaration.ID
 	e.ExperimentDeclaration = declaration
 
-	if (databases.DB.Create(e)).Error != nil {
+	if (databases.DB.Create(&e)).Error != nil {
 		h.log.Fatal("Unable to register experiment")
 	}
 }
