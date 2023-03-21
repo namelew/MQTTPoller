@@ -70,7 +70,7 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 
 	log.Register("Start experiment " + strconv.FormatInt(id, 10))
 
-	cmd := exec.Command("./"+w.tool, flag, arg_file)
+	cmd := exec.Command(w.tool, flag, arg_file)
 
 	mess, _ := json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: "start", Attr: cmdExp})
 	t := w.client.Publish(w.Id+"/Experiments/Status", byte(1), true, string(mess))

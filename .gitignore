@@ -2,5 +2,6 @@
 worker
 .vscode
 vendor
-worker.log
 *.bin
+*.log
+*.db
