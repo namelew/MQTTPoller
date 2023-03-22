@@ -1,13 +1,13 @@
 package orquestration
 
 import (
-	"strings"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,17 +26,20 @@ import (
 
 var infos = make([]output.Info, 0, 10)
 var ws = make([]messages.Worker, 1, 10)
-var rexp []output.ExperimentResult
-var rexpMutex sync.Mutex
-var waitQueueMutex sync.Mutex
-var waitQueue []output.ExperimentResult
-var expWG sync.WaitGroup
+
+type queue struct {
+	items []output.ExperimentResult
+	m *sync.Mutex
+}
 
 type Orquestrator struct {
 	log         *logs.Log
 	workers     *seworkers.Workers
 	experiments *experiments.Experiments
 	client      *nmqtt.Client
+	waitGroup   *sync.WaitGroup
+	response 	queue
+	repress 	queue
 	tolerance   int
 }
 
@@ -45,6 +48,15 @@ func Build(c *nmqtt.Client, t int) *Orquestrator {
 		log:         c.Log,
 		workers:     seworkers.Build(c.Log),
 		experiments: experiments.Build(c.Log),
+		waitGroup: &sync.WaitGroup{},
+		response: queue{
+			items: []output.ExperimentResult{},
+			m: &sync.Mutex{},
+		},
+		repress: queue{
+			items: []output.ExperimentResult{},
+			m: &sync.Mutex{},
+		},
 		client:      c,
 		tolerance:   t,
 	}
@@ -155,14 +167,14 @@ func (o Orquestrator) setMessageHandler(t *string) {
 		exp :=  o.experiments.Get(output.Meta.ID)
 
 		if exp.Finish {
-			waitQueueMutex.Lock()
-			waitQueue = append(waitQueue, output)
-			waitQueueMutex.Unlock()
+			o.repress.m.Lock()
+			o.repress.items = append(o.repress.items, output)
+			o.repress.m.Unlock()
 		} else {
 			o.experiments.Update(output.Meta.ID, models.Experiment{Finish: true})
-			rexpMutex.Lock()
-			rexp = append(rexp, output)
-			rexpMutex.Unlock()
+			o.response.m.Lock()
+			o.response.items = append(o.response.items, output)
+			o.response.m.Unlock()
 		}
 	})
 
@@ -191,12 +203,12 @@ func (o Orquestrator) setMessageHandler(t *string) {
 	})
 }
 
-func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
+func (o *Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
 	expid := time.Now().Unix()
 
-	rexpMutex.Lock()
-	rexp = nil
-	rexpMutex.Unlock()
+	o.response.m.Lock()
+	o.response.items = nil
+	o.response.m.Unlock()
 
 	var cmd messages.Command
 	var experiment messages.CommandExperiment
@@ -237,13 +249,13 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 	err := experiment.Attach(&cmd)
 
 	if err != nil {
-		return rexp, err
+		return o.response.items, err
 	}
 
 	msg, err := json.Marshal(cmd)
 
 	if err != nil {
-		return rexp, err
+		return o.response.items, err
 	}
 
 	o.experiments.Add(
@@ -258,9 +270,11 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 	if arg.Id[0] == -1 {
 		workers := o.workers.List(nil)
 
+		o.waitGroup.Add(len(workers))
+
 		for i := range workers {
 			if !workers[i].Online {
-				o.log.Register("Worker " + strconv.Itoa(i) + " is off, skipping")
+				o.log.Register("Worker " + workers[i].Token + " is off, skipping")
 				continue
 			}
 
@@ -268,7 +282,7 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 
 			// go receiveControl(i, arg.Description.ExecTime*5)
 
-			o.log.Register("Requesting experiment in worker " + strconv.Itoa(i))
+			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
 	} else {
 		workers := make([]*models.Worker, 10)
@@ -277,31 +291,32 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 			workers = append(workers, o.workers.Get(i))
 		}
 
+		o.waitGroup.Add(len(workers))
 
 		for i := range workers {
 			if !workers[i].Online {
-				o.log.Register("Worker " + strconv.Itoa(i) + " is off, skipping")
+				o.log.Register("Worker " + workers[i].Token + " is off, skipping")
 			}
 
 			o.client.Send(workers[i].Token+"/Command", msg)
 
 			// go receiveControl(arg.Id[i], arg.Description.ExecTime*5)
 
-			o.log.Register("Requesting experiment in worker " + strconv.Itoa(arg.Id[i]))
+			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
 	}
 
-	expWG.Wait()
+	o.waitGroup.Wait()
 
-	rexpMutex.Lock()
-	waitQueueMutex.Lock()
-	rexp = append(rexp, waitQueue...)
-	rexpMutex.Unlock()
+	o.response.m.Lock()
+	o.repress.m.Lock()
+	o.response.items = append(o.response.items, o.repress.items...)
+	o.response.m.Unlock()
 
-	waitQueue = nil
-	waitQueueMutex.Unlock()
+	o.repress.items = nil
+	o.repress.m.Unlock()
 
-	return rexp, nil
+	return o.response.items, nil
 }
 
 // vai precisar de um join
