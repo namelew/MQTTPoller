@@ -70,31 +70,15 @@ func (o Orquestrator) GetWorker(id int) *models.Worker {
 	return o.workers.Get(id)
 }
 
-func (o Orquestrator) timeout(token string, login bool) {
+func (o Orquestrator) timeout(token string, topic string, timeHandler func (t context.Context, tk, tp string,tl int)) {
 	timer, cancel := context.WithCancel(context.Background())
 
-	o.client.Register(token+"/KeepAlive", 1, true, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register(token+topic, 1, true, func(c mqtt.Client, m mqtt.Message) {
 		cancel()
-		go o.timeout(string(m.Payload()), false)
+		go o.timeout(string(m.Payload()), topic, timeHandler)
 	})
 
-	tolerance := func(t int) int {
-		if login {
-			return t * 2
-		}
-		return t
-	}(o.tolerance)
-
-	go func(t context.Context, tk string, tl int) {
-		select {
-		case <-t.Done():
-			return
-		case <-time.After(time.Second * time.Duration(tl)):
-			o.client.Unregister(tk + "/KeepAlive")
-			o.log.Register("lost connection with worker " + tk)
-			o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
-		}
-	}(timer, token, tolerance)
+	go timeHandler(timer, token, topic, o.tolerance)
 }
 
 func (o Orquestrator) Init() error {
@@ -123,7 +107,16 @@ func (o Orquestrator) Init() error {
 
 			o.client.Send("Orquestrator/Register/Log", worker+"-"+clientID)
 
-			go o.timeout(clientID, true)
+			go o.timeout(clientID, "/KeepAlive", func(t context.Context, tk, tp string,tl int) {
+				select {
+				case <-t.Done():
+					return
+				case <-time.After(time.Second * time.Duration(tl)):
+					o.client.Unregister(tk + tp)
+					o.log.Register("lost connection with worker " + tk)
+					o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
+				}
+			})
 		}(m.Payload())
 	})
 
@@ -139,7 +132,16 @@ func (o Orquestrator) Init() error {
 
 			o.client.Send(token+"/Login/Log", "true")
 
-			go o.timeout(token, true)
+			go o.timeout(token, "/KeepAlive", func(t context.Context, tk, tp string,tl int) {
+				select {
+				case <-t.Done():
+					return
+				case <-time.After(time.Second * time.Duration(tl)):
+					o.client.Unregister(tk + tp)
+					o.log.Register("lost connection with worker " + tk)
+					o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
+				}
+			})
 		}(m.Payload())
 	})
 
