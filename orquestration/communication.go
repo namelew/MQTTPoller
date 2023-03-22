@@ -164,8 +164,6 @@ func (o Orquestrator) setMessageHandler(t *string) {
 			rexp = append(rexp, output)
 			rexpMutex.Unlock()
 		}
-
-		log.Println(output)
 	})
 
 	o.client.Register(*t+"/Experiments/Status", 1, false, func(c mqtt.Client, m mqtt.Message) {
@@ -250,6 +248,7 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 
 	o.experiments.Add(
 		models.Experiment{
+			ID: uint64(expid),
 			Finish: false,
 		},
 		arg.Description,
@@ -301,8 +300,6 @@ func (o Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResul
 
 	waitQueue = nil
 	waitQueueMutex.Unlock()
-
-	log.Println(o.experiments.List())
 
 	return rexp, nil
 }
