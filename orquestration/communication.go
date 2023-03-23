@@ -3,6 +3,7 @@ package orquestration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -293,7 +294,15 @@ func (o *Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResu
 
 			o.client.Send(workers[i].Token+"/Command", msg)
 
-			// go receiveControl(i, arg.Description.ExecTime*5)
+			go func(id uint64, tolerance int) {
+				<-time.After(time.Second * time.Duration(tolerance))
+				exp := o.experiments.Get(id)
+
+				if !exp.Finish {
+					go o.experiments.Update(id, models.Experiment{Finish: true})
+					o.waitGroup.Done()
+				}
+			}(uint64(expid), arg.Description.ExecTime*5)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
@@ -313,7 +322,15 @@ func (o *Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResu
 
 			o.client.Send(workers[i].Token+"/Command", msg)
 
-			// go receiveControl(arg.Id[i], arg.Description.ExecTime*5)
+			go func(id uint64, tolerance int) {
+				<-time.After(time.Second * time.Duration(tolerance))
+				exp := o.experiments.Get(id)
+
+				if !exp.Finish {
+					go o.experiments.Update(id, models.Experiment{Finish: true})
+					o.waitGroup.Done()
+				}
+			}(uint64(expid), arg.Description.ExecTime*5)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
@@ -328,6 +345,10 @@ func (o *Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResu
 
 	o.repress.items = nil
 	o.repress.m.Unlock()
+
+	if len(o.response.items) == 0{
+		return o.response.items, errors.New("failed to run experiment")
+	}
 
 	return o.response.items, nil
 }
