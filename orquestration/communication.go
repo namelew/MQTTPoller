@@ -39,8 +39,8 @@ type Orquestrator struct {
 	experiments *experiments.Experiments
 	client      *local.Client
 	waitGroup   *sync.WaitGroup
-	response 	queue
-	repress 	queue
+	response 	*queue
+	repress 	*queue
 	tolerance   int
 }
 
@@ -50,11 +50,11 @@ func Build(c *local.Client, t int) *Orquestrator {
 		workers:     seworkers.Build(c.Log),
 		experiments: experiments.Build(c.Log),
 		waitGroup: &sync.WaitGroup{},
-		response: queue{
+		response: &queue{
 			items: []output.ExperimentResult{},
 			m: &sync.Mutex{},
 		},
-		repress: queue{
+		repress: &queue{
 			items: []output.ExperimentResult{},
 			m: &sync.Mutex{},
 		},
@@ -167,7 +167,7 @@ func (o Orquestrator) End() {
 	o.log.Register("shutdown")
 }
 
-func (o Orquestrator) setMessageHandler(t *string) {
+func (o *Orquestrator) setMessageHandler(t *string) {
 	o.client.Register(*t+"/Experiments/Results", 1, false, func(c paho.Client, m paho.Message) {
 		var output output.ExperimentResult
 
@@ -188,6 +188,7 @@ func (o Orquestrator) setMessageHandler(t *string) {
 			o.response.m.Lock()
 			o.response.items = append(o.response.items, output)
 			o.response.m.Unlock()
+			o.waitGroup.Done()
 		}
 	})
 
@@ -204,10 +205,9 @@ func (o Orquestrator) setMessageHandler(t *string) {
 		case "start":
 			return
 		case "finish":
-			if exp.ID != 0 {
-				go o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
-			}
+			return
 		default:
+			o.waitGroup.Done()
 			if exp.ID != 0 {
 				go o.experiments.Update(uint64(expid), models.Experiment{Finish: true, Error: exps.Status})
 				//redoExperiment(id, exp)
