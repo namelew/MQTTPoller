@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
+	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/databases"
 	"github.com/namelew/mqtt-bm-latency/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/databases/models"
@@ -20,7 +20,8 @@ import (
 	"github.com/namelew/mqtt-bm-latency/input"
 	"github.com/namelew/mqtt-bm-latency/logs"
 	"github.com/namelew/mqtt-bm-latency/messages"
-	nmqtt "github.com/namelew/mqtt-bm-latency/network/mqtt"
+	local "github.com/namelew/mqtt-bm-latency/network/mqtt"
+	tout "github.com/namelew/mqtt-bm-latency/network/mqtt/timeout"
 	"github.com/namelew/mqtt-bm-latency/output"
 )
 
@@ -36,14 +37,14 @@ type Orquestrator struct {
 	log         *logs.Log
 	workers     *seworkers.Workers
 	experiments *experiments.Experiments
-	client      *nmqtt.Client
+	client      *local.Client
 	waitGroup   *sync.WaitGroup
 	response 	queue
 	repress 	queue
 	tolerance   int
 }
 
-func Build(c *nmqtt.Client, t int) *Orquestrator {
+func Build(c *local.Client, t int) *Orquestrator {
 	return &Orquestrator{
 		log:         c.Log,
 		workers:     seworkers.Build(c.Log),
@@ -70,15 +71,15 @@ func (o Orquestrator) GetWorker(id int) *models.Worker {
 	return o.workers.Get(id)
 }
 
-func (o Orquestrator) timeout(token string, topic string, timeHandler func (t context.Context, tk, tp string,tl int)) {
+func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func (t context.Context, tk, tp string,tl int)) {
 	timer, cancel := context.WithCancel(context.Background())
 
-	o.client.Register(token+topic, 1, true, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register(t.OID+t.Topic, 1, true, func(c paho.Client, m paho.Message) {
 		cancel()
-		go o.timeout(string(m.Payload()), topic, timeHandler)
+		go o.timeout(t,timeHandler)
 	})
 
-	go timeHandler(timer, token, topic, o.tolerance)
+	go timeHandler(timer, t.OID, t.Topic, t.Tolerance)
 }
 
 func (o Orquestrator) Init() error {
@@ -88,7 +89,7 @@ func (o Orquestrator) Init() error {
 
 	databases.Connect(o.log)
 
-	o.client.Register("Orquestrator/Register", 1, false, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register("Orquestrator/Register", 1, false, func(c paho.Client, m paho.Message) {
 		go func(messagePayload []byte) {
 			var clientID string = ""
 			worker := string(messagePayload)
@@ -107,7 +108,12 @@ func (o Orquestrator) Init() error {
 
 			o.client.Send("Orquestrator/Register/Log", worker+"-"+clientID)
 
-			go o.timeout(clientID, "/KeepAlive", func(t context.Context, tk, tp string,tl int) {
+			go o.timeout(&tout.Timeout{
+				OID: clientID,
+				Topic: "/KeepAlive",
+				RecLimit: -1,
+				Tolerance: o.tolerance,
+			}, func(t context.Context, tk, tp string,tl int) {
 				select {
 				case <-t.Done():
 					return
@@ -120,7 +126,7 @@ func (o Orquestrator) Init() error {
 		}(m.Payload())
 	})
 
-	o.client.Register("Orquestrator/Login", 1, false, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register("Orquestrator/Login", 1, false, func(c paho.Client, m paho.Message) {
 		go func(messagePayload []byte) {
 			token := string(messagePayload)
 
@@ -132,7 +138,12 @@ func (o Orquestrator) Init() error {
 
 			o.client.Send(token+"/Login/Log", "true")
 
-			go o.timeout(token, "/KeepAlive", func(t context.Context, tk, tp string,tl int) {
+			go o.timeout(&tout.Timeout{
+				OID: token,
+				Topic: "/KeepAlive",
+				RecLimit: -1,
+				Tolerance: o.tolerance,
+			}, func(t context.Context, tk, tp string,tl int) {
 				select {
 				case <-t.Done():
 					return
@@ -157,7 +168,7 @@ func (o Orquestrator) End() {
 }
 
 func (o Orquestrator) setMessageHandler(t *string) {
-	o.client.Register(*t+"/Experiments/Results", 1, false, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register(*t+"/Experiments/Results", 1, false, func(c paho.Client, m paho.Message) {
 		var output output.ExperimentResult
 
 		err := json.Unmarshal(m.Payload(), &output)
@@ -180,7 +191,7 @@ func (o Orquestrator) setMessageHandler(t *string) {
 		}
 	})
 
-	o.client.Register(*t+"/Experiments/Status", 1, false, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Register(*t+"/Experiments/Status", 1, false, func(c paho.Client, m paho.Message) {
 		var exps messages.Status
 		json.Unmarshal(m.Payload(), &exps)
 
@@ -359,7 +370,7 @@ func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
 				o.log.Register("Worker " + strconv.Itoa(i) + " isn't report, skipping")
 				continue
 			}
-			o.client.Register(ws[i].Id+"/Info", 1, true, func(c mqtt.Client, m mqtt.Message) {
+			o.client.Register(ws[i].Id+"/Info", 1, true, func(c paho.Client, m paho.Message) {
 				messageHandlerInfos(m, i)
 			})
 
@@ -389,7 +400,7 @@ func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
 				}
 			}
 
-			o.client.Register(ws[arg.Id[i]].Id+"/Info", 1, true, func(c mqtt.Client, m mqtt.Message) {
+			o.client.Register(ws[arg.Id[i]].Id+"/Info", 1, true, func(c paho.Client, m paho.Message) {
 				messageHandlerInfos(m, arg.Id[i])
 			})
 
