@@ -22,7 +22,6 @@ func Connect(l *logs.Log) {
 	err = DB.AutoMigrate(
 		&models.ExperimentDeclaration{},
 		&models.Experiment{},
-		&models.Info{},
 		&models.Worker{},
 	)
 

@@ -2,13 +2,6 @@ package input
 
 import "github.com/namelew/mqtt-bm-latency/databases/models"
 
-type Info struct {
-	Id            []int
-	MemoryDisplay bool
-	CpuDisplay    bool
-	DiscDisplay   bool
-}
-
 type Experiment struct {
 	Attempts              int    `json:"attempts"`
 	Tool                  string `json:"tool"`

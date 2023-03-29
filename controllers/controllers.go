@@ -9,14 +9,12 @@ import (
 
 type Controller struct {
 	exp     experiments.Experiments
-	infos   workers.Infos
 	workers workers.Workers
 }
 
 func Build(o *orquestration.Orquestrator) Controller {
 	return Controller{
 		exp:     experiments.Experiments{Orquestrator: o},
-		infos:   workers.Infos{Orquestrator: o},
 		workers: workers.Workers{Orquestrator: o},
 	}
 }
@@ -38,12 +36,6 @@ func (cs Controller) List(c echo.Context) error {
 	switch c.Request().URL.Path {
 	case "/orquestrator/worker":
 		resp, err := cs.workers.List(c)
-		if err != nil {
-			return err
-		}
-		return c.JSON(200, resp)
-	case "/orquestrator/info":
-		resp, err := cs.infos.List(c)
 		if err != nil {
 			return err
 		}

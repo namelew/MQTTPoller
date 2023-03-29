@@ -27,7 +27,6 @@ import (
 	"github.com/namelew/mqtt-bm-latency/waitgroup"
 )
 
-var infos = make([]output.Info, 0, 10)
 var ws = make([]messages.Worker, 1, 10)
 
 type queue struct {
@@ -369,79 +368,4 @@ func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 	o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
 
 	return nil
-}
-
-func (o Orquestrator) GetInfo(arg input.Info) ([]output.Info, error) {
-	var infoCommand messages.Command
-	infos = nil
-
-	infoCommand.Name = "info"
-	infoCommand.CommandType = "command moderation"
-	infoCommand.Arguments = map[string]interface{}{"cpuDisplay": arg.CpuDisplay, "discDisplay": arg.DiscDisplay, "memoryDisplay": arg.MemoryDisplay}
-
-	msg, err := json.Marshal(&infoCommand)
-
-	if err != nil {
-		return infos, err
-	}
-
-	if arg.Id[0] == -1 {
-		for i := 0; i < len(ws); i++ {
-			if !ws[i].Status {
-				o.log.Register("Worker " + strconv.Itoa(i) + " isn't report, skipping")
-				continue
-			}
-			o.client.Register(ws[i].Id+"/Info", 1, true, func(c paho.Client, m paho.Message) {
-				messageHandlerInfos(m, i)
-			})
-
-			o.client.Send(ws[i].Id+"/Command", msg)
-
-			for !ws[i].ReceiveConfirmation {
-				if !ws[i].Status {
-					o.log.Register("Worker " + strconv.Itoa(i) + " isn't report, skipping")
-					break
-				}
-				time.Sleep(time.Second)
-			}
-			ws[i].ReceiveConfirmation = false
-			o.client.Unregister(ws[i].Id + "/Info")
-		}
-	} else {
-		argTam := len(arg.Id)
-
-		for i := 0; i < argTam; i++ {
-			if !ws[arg.Id[i]].Status {
-				if argTam > 1 {
-					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, skipping")
-					continue
-				} else {
-					o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, aborting request")
-					break
-				}
-			}
-
-			o.client.Register(ws[arg.Id[i]].Id+"/Info", 1, true, func(c paho.Client, m paho.Message) {
-				messageHandlerInfos(m, arg.Id[i])
-			})
-
-			o.client.Send(ws[arg.Id[i]].Id+"/Command", msg)
-
-			for !ws[arg.Id[i]].ReceiveConfirmation {
-				if !ws[arg.Id[i]].Status {
-					if argTam > 1 {
-						o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " isn't report, skipping")
-					} else {
-						o.log.Register("Worker " + strconv.Itoa(arg.Id[i]) + " is off, aborting request")
-					}
-					break
-				}
-				time.Sleep(time.Second)
-			}
-			ws[arg.Id[i]].ReceiveConfirmation = false
-			o.client.Unregister(ws[i].Id + "/Info")
-		}
-	}
-
-	return infos, nil
 }

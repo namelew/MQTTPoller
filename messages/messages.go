@@ -36,12 +36,6 @@ type CommandExperiment struct {
 	TlsKeystorePassword  string 	`json:"tls_keystore_pass"`
 }
 
-type Info struct {
-	Cpu  string
-	Ram  uint64
-	Disk uint64
-}
-
 type Command struct {
 	Name        string                 `json:"name"`
 	CommandType string                 `json:"commandType"`
