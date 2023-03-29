@@ -16,6 +16,13 @@ make
 ```
 git clone -b orquestrator https://github.com/namelew/MQTTDistributedBenck images/orquestrator/dump
 git clone -b worker https://github.com/namelew/MQTTDistributedBenck images/worker/dump
+mkdir dump
+cd dump
+git clone https://github.com/namelew/MQTTDistributedBenck orquestrator
+git clone -b worker https://github.com/namelew/MQTTDistributedBenck worker
+cd ..
+docker build -t mqttdb/orquestrator:1 -f "images/orquestrator.dockerfile" .
+docker build -t mqttdb/worker:1 -f "images/worker.dockerfile" .
 docker compose up -d
 ```
 ## Utilização
@@ -36,3 +43,128 @@ Após isso, abrirá um shell interativo de controle para a ferramenta. Ele aceit
 | cancel | cancela um experimento em execução em um worker|
 
 ### Exemplos
+| broker | `tcp://localhost:1883` | Communication broker to worker - orquestrator relation|
+| adress |  | Endereço da api na rede|
+| port | `8000` | Porta tcp de comunicação da api do orquestrador|
+
+Ao iniciar, ele ficará escutando requisições http na porta escolhida e executará comandos baseado na rota escolhida
+
+## Rotas
+### Descrição
+| Route | Method | Description |
+|:-----|:--------------|:------------|
+| `/orquestrator/worker` | GET | Retorna todos os workers conhecidos, seus estados e o experimento que estão executando |
+| `/orquestrator/info` | GET | Retorna informações sobre o máquina onde o worker está executando|
+| `/orquestrator/experiment/start` | POST | Executa um experimento em um ou mais workers selecionados|
+| `/orquestrator/experiment/cancel/:id/:expid` | DELETE | Cancela um experimento de id `expid` que está executando num worker `id`|
+### Mensagens
+#### /orquestrator/worker
+* request
+```
+{
+    "wid": id | [ids] | null
+}
+```
+* response
+```
+[
+    {
+        "Id": int,
+        "NetId": string
+        "Online": bool
+        "History": [
+            {
+                "Command": description
+                "Finished": bool
+                "Id": int
+            },
+            ...
+        ]
+    },
+    ...
+]
+```
+#### /orquestrator/info
+* request
+```
+{
+    "Id": [ids],
+    "MemoryDisplay": bool,
+    "CpuDisplay": bool,
+    "DiscDisplay": bool
+}
+```
+* response
+```
+[
+    {
+        "Id": int,
+        "NetId": string,
+        "Infos": {
+            "Cpu": cpu description string,
+            "Ram": total ram int,
+            "Disk": total disk int
+        }
+    },
+    ...
+]
+```
+#### /orquestrator/experiment/start
+* request
+```
+{
+    "id": [ids],
+    "description":{
+        "tool":	tool string name,
+        "broker":	broker ip/dns,
+        "attempts": int,
+        "port":	broker port,
+        "mqttVersion":	3|5,
+        "numPublishers": int,
+        "numSubscribers":	int,
+        "qosPublisher":	0|1|2,
+        "qosSubscriber":	0|1|2,
+        "sharedSubscription":	bool,
+        "retain":	bool,
+        "topic":	topic name,
+        "payload":	message size,
+        "numMessages":	int,
+        "ramUp":	ramp up time,
+        "rampDown": ramp down time,
+        "interval":	interval beetwen messages,
+        "subscriberTimeout": int second,
+        "execTime":	int second,
+        "logLevel":	"INFO"|"SEVERE"|"WARNING"|"ALL",
+        "ntp": ntp server adress,
+        "output": get output file bool,
+        "username": mqtt client username string,
+        "password": mqtt client password string,
+        "tlsTruststore": string file path,
+        "tlsTruststorePass": string key file path,
+        "tlsKeystore": string file path,
+        "tlsKeystorePass": string key file path
+    },
+    "exeMode":unused attribute
+}
+```
+* response
+```
+[
+    {
+        "meta": meta object
+        "publish": publishers result object
+        "subscribe": subscribers result object
+    },
+    ...
+]
+```
+#### /orquestrator/experiment/cancel/:id/:expid
+* request
+```
+    vars in url
+```
+* response
+```
+    request status code
+    null | error
+```

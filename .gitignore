@@ -3,9 +3,13 @@
 *.config
 tools
 .vscode
-workers
+worker
+orquestrator
+examples
 dump
-*.log
-*.conf
+*.db-journal
+*.db
 *.config
+*.conf
 *.bin
+*.log
