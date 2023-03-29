@@ -1,4 +1,4 @@
-package communication
+package worker
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/namelew/mqtt-bm-latency/internal/history"
+	"github.com/namelew/mqtt-bm-latency/internal/worker/history"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 	"github.com/namelew/mqtt-bm-latency/packages/utils"
 )

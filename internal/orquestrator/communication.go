@@ -1,4 +1,4 @@
-package orquestration
+package orquestrator
 
 import (
 	"context"
@@ -13,11 +13,11 @@ import (
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
-	"github.com/namelew/mqtt-bm-latency/internal/databases"
-	"github.com/namelew/mqtt-bm-latency/internal/databases/filters"
-	"github.com/namelew/mqtt-bm-latency/internal/databases/models"
-	"github.com/namelew/mqtt-bm-latency/internal/databases/services/experiments"
-	seworkers "github.com/namelew/mqtt-bm-latency/internal/databases/services/workers"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/filters"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/services/experiments"
+	seworkers "github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/services/workers"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 	local "github.com/namelew/mqtt-bm-latency/packages/network"

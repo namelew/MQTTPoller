@@ -1,9 +1,9 @@
 package workers
 
 import (
-	"github.com/namelew/mqtt-bm-latency/internal/databases"
-	"github.com/namelew/mqtt-bm-latency/internal/databases/filters"
-	"github.com/namelew/mqtt-bm-latency/internal/databases/models"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/filters"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 )
 

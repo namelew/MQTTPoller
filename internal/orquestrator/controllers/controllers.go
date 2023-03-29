@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/internal/controllers/experiments"
-	"github.com/namelew/mqtt-bm-latency/internal/controllers/workers"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestration"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers/experiments"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers/workers"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 )
 
 type Controller struct {
@@ -12,7 +12,7 @@ type Controller struct {
 	workers workers.Workers
 }
 
-func Build(o *orquestration.Orquestrator) Controller {
+func Build(o *orquestrator.Orquestrator) Controller {
 	return Controller{
 		exp:     experiments.Experiments{Orquestrator: o},
 		workers: workers.Workers{Orquestrator: o},

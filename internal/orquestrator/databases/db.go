@@ -1,7 +1,7 @@
 package databases
 
 import (
-	"github.com/namelew/mqtt-bm-latency/internal/databases/models"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

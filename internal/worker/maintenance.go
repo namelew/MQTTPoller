@@ -1,4 +1,4 @@
-package communication
+package worker
 
 import (
 	"encoding/json"
@@ -17,7 +17,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
-	"github.com/namelew/mqtt-bm-latency/internal/history"
+	"github.com/namelew/mqtt-bm-latency/internal/worker/history"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 	"github.com/namelew/mqtt-bm-latency/packages/utils"
 )

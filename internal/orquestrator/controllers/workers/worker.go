@@ -4,12 +4,12 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestration"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 )
 
 type Workers struct {
-	Orquestrator *orquestration.Orquestrator
+	Orquestrator *orquestrator.Orquestrator
 }
 
 func (w Workers) Get(c echo.Context) (messages.Worker, error) {

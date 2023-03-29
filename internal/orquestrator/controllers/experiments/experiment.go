@@ -6,11 +6,11 @@ import (
 
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestration"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 )
 
 type Experiments struct {
-	Orquestrator *orquestration.Orquestrator
+	Orquestrator *orquestrator.Orquestrator
 }
 
 func (e Experiments) StartExperiment(c echo.Context) ([]messages.ExperimentResult, error) {

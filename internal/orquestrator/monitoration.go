@@ -1,4 +1,4 @@
-package orquestration
+package orquestrator
 
 // func receiveControl(id int, timeout int) {
 // 	var start int64 = time.Now().UnixMilli()
