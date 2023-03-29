@@ -14,18 +14,10 @@ make
  ```
 ## Example - Docker
 ```
-git clone -b orquestrator https://github.com/namelew/MQTTDistributedBenck images/orquestrator/dump
-git clone -b worker https://github.com/namelew/MQTTDistributedBenck images/worker/dump
-mkdir dump
-cd dump
-git clone https://github.com/namelew/MQTTDistributedBenck orquestrator
-git clone -b worker https://github.com/namelew/MQTTDistributedBenck worker
-cd ..
-docker build -t mqttdb/orquestrator:1 -f "images/orquestrator.dockerfile" .
-docker build -t mqttdb/worker:1 -f "images/worker.dockerfile" .
-docker compose up -d
+make docker
 ```
-## Utilização
+## Orquestrador
+### Utilização
 Para iniciar o orquestrador execute o binário orquestrator, que será gerado no diretório bin, ele possui as seguintes flags de configuração:
 
 | Flag | Default value | Description |
@@ -34,20 +26,7 @@ Para iniciar o orquestrador execute o binário orquestrator, que será gerado no
 | broker | `tcp://localhost:1883` | communication broker to worker - orquestrator relation|
 | port   | 8000 | api rest communication port |
 
-Após isso, abrirá um shell interativo de controle para a ferramenta. Ele aceita, quatro commandos diferentes:
-| Command | Description |
-|:-----|:------------|
-| ls | lista todos os workers cadastrados durante a sessão atual|
-| start | inicia experimentos em 1 ou mais worker|
-| info  | recuperação informações de hardware e do sistema operacional de um ou mais workers |
-| cancel | cancela um experimento em execução em um worker|
-
-### Exemplos
-| broker | `tcp://localhost:1883` | Communication broker to worker - orquestrator relation|
-| adress |  | Endereço da api na rede|
-| port | `8000` | Porta tcp de comunicação da api do orquestrador|
-
-Ao iniciar, ele ficará escutando requisições http na porta escolhida e executará comandos baseado na rota escolhida
+Após isso, será iniciado uma API Rest com as rotas abaixo
 
 ## Rotas
 ### Descrição
@@ -58,12 +37,10 @@ Ao iniciar, ele ficará escutando requisições http na porta escolhida e execut
 | `/orquestrator/experiment/start` | POST | Executa um experimento em um ou mais workers selecionados|
 | `/orquestrator/experiment/cancel/:id/:expid` | DELETE | Cancela um experimento de id `expid` que está executando num worker `id`|
 ### Mensagens
-#### /orquestrator/worker
+#### /orquestrator/worker/:id
 * request
 ```
-{
-    "wid": id | [ids] | null
-}
+    vars in url
 ```
 * response
 ```
@@ -84,30 +61,21 @@ Ao iniciar, ele ficará escutando requisições http na porta escolhida e execut
     ...
 ]
 ```
-#### /orquestrator/info
-* request
+or 
 ```
 {
-    "Id": [ids],
-    "MemoryDisplay": bool,
-    "CpuDisplay": bool,
-    "DiscDisplay": bool
+    "Id": int,
+    "NetId": string
+    "Online": bool
+    "History": [
+        {
+            "Command": description
+            "Finished": bool
+            "Id": int
+        },
+        ...
+    ]
 }
-```
-* response
-```
-[
-    {
-        "Id": int,
-        "NetId": string,
-        "Infos": {
-            "Cpu": cpu description string,
-            "Ram": total ram int,
-            "Disk": total disk int
-        }
-    },
-    ...
-]
 ```
 #### /orquestrator/experiment/start
 * request
