@@ -24,6 +24,7 @@ import (
 	local "github.com/namelew/mqtt-bm-latency/network/mqtt"
 	tout "github.com/namelew/mqtt-bm-latency/network/mqtt/timeout"
 	"github.com/namelew/mqtt-bm-latency/output"
+	"github.com/namelew/mqtt-bm-latency/waitgroup"
 )
 
 var infos = make([]output.Info, 0, 10)
@@ -39,7 +40,7 @@ type Orquestrator struct {
 	workers     *seworkers.Workers
 	experiments *experiments.Experiments
 	client      *local.Client
-	waitGroup   *sync.WaitGroup
+	waitGroup   *waitgroup.WaitGroup
 	response 	*queue
 	repress 	*queue
 	tolerance   int
@@ -50,7 +51,7 @@ func Build(c *local.Client, t int) *Orquestrator {
 		log:         c.Log,
 		workers:     seworkers.Build(c.Log),
 		experiments: experiments.Build(c.Log),
-		waitGroup: &sync.WaitGroup{},
+		waitGroup: waitgroup.New(),
 		response: &queue{
 			items: []output.ExperimentResult{},
 			m: &sync.Mutex{},
@@ -185,7 +186,6 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 			o.repress.items = append(o.repress.items, output)
 			o.repress.m.Unlock()
 		} else {
-			o.experiments.Update(output.Meta.ID, models.Experiment{Finish: true})
 			o.response.m.Lock()
 			o.response.items = append(o.response.items, output)
 			o.response.m.Unlock()
@@ -299,7 +299,6 @@ func (o *Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResu
 				exp := o.experiments.Get(id)
 
 				if !exp.Finish {
-					go o.experiments.Update(id, models.Experiment{Finish: true})
 					o.waitGroup.Done()
 				}
 			}(uint64(expid), arg.Description.ExecTime*5)
@@ -327,7 +326,6 @@ func (o *Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResu
 				exp := o.experiments.Get(id)
 
 				if !exp.Finish {
-					go o.experiments.Update(id, models.Experiment{Finish: true})
 					o.waitGroup.Done()
 				}
 			}(uint64(expid), arg.Description.ExecTime*5)
@@ -345,6 +343,8 @@ func (o *Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResu
 
 	o.repress.items = nil
 	o.repress.m.Unlock()
+
+	go o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
 
 	if len(o.response.items) == 0{
 		return o.response.items, errors.New("failed to run experiment")
