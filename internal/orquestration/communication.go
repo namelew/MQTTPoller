@@ -13,24 +13,20 @@ import (
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
-	"github.com/namelew/mqtt-bm-latency/databases"
-	"github.com/namelew/mqtt-bm-latency/databases/filters"
-	"github.com/namelew/mqtt-bm-latency/databases/models"
-	"github.com/namelew/mqtt-bm-latency/databases/services/experiments"
-	seworkers "github.com/namelew/mqtt-bm-latency/databases/services/workers"
-	"github.com/namelew/mqtt-bm-latency/input"
-	"github.com/namelew/mqtt-bm-latency/logs"
-	"github.com/namelew/mqtt-bm-latency/messages"
-	local "github.com/namelew/mqtt-bm-latency/network/mqtt"
-	tout "github.com/namelew/mqtt-bm-latency/network/mqtt/timeout"
-	"github.com/namelew/mqtt-bm-latency/output"
-	"github.com/namelew/mqtt-bm-latency/waitgroup"
+	"github.com/namelew/mqtt-bm-latency/internal/databases"
+	"github.com/namelew/mqtt-bm-latency/internal/databases/filters"
+	"github.com/namelew/mqtt-bm-latency/internal/databases/models"
+	"github.com/namelew/mqtt-bm-latency/internal/databases/services/experiments"
+	seworkers "github.com/namelew/mqtt-bm-latency/internal/databases/services/workers"
+	"github.com/namelew/mqtt-bm-latency/packages/logs"
+	"github.com/namelew/mqtt-bm-latency/packages/messages"
+	local "github.com/namelew/mqtt-bm-latency/packages/network"
+	tout "github.com/namelew/mqtt-bm-latency/packages/timeout"
+	"github.com/namelew/mqtt-bm-latency/packages/waitgroup"
 )
 
-var ws = make([]messages.Worker, 1, 10)
-
 type queue struct {
-	items []output.ExperimentResult
+	items []messages.ExperimentResult
 	m *sync.Mutex
 }
 
@@ -52,11 +48,11 @@ func Build(c *local.Client, t int) *Orquestrator {
 		experiments: experiments.Build(c.Log),
 		waitGroup: waitgroup.New(),
 		response: &queue{
-			items: []output.ExperimentResult{},
+			items: []messages.ExperimentResult{},
 			m: &sync.Mutex{},
 		},
 		repress: &queue{
-			items: []output.ExperimentResult{},
+			items: []messages.ExperimentResult{},
 			m: &sync.Mutex{},
 		},
 		client:      c,
@@ -170,7 +166,7 @@ func (o Orquestrator) End() {
 
 func (o *Orquestrator) setMessageHandler(t *string) {
 	o.client.Register(*t+"/Experiments/Results", 1, false, func(c paho.Client, m paho.Message) {
-		var output output.ExperimentResult
+		var output messages.ExperimentResult
 
 		err := json.Unmarshal(m.Payload(), &output)
 
@@ -216,7 +212,7 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 	})
 }
 
-func (o *Orquestrator) StartExperiment(arg input.Start) ([]output.ExperimentResult, error) {
+func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.ExperimentResult, error) {
 	expid := time.Now().Unix()
 
 	o.response.m.Lock()

@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/namelew/mqtt-bm-latency/messages"
+	"github.com/namelew/mqtt-bm-latency/packages/messages"
 )
 
 func FileExists(file string) bool {

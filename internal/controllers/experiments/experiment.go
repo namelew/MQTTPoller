@@ -5,28 +5,27 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/input"
-	"github.com/namelew/mqtt-bm-latency/orquestration"
-	"github.com/namelew/mqtt-bm-latency/output"
+	"github.com/namelew/mqtt-bm-latency/packages/messages"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestration"
 )
 
 type Experiments struct {
 	Orquestrator *orquestration.Orquestrator
 }
 
-func (e Experiments) StartExperiment(c echo.Context) ([]output.ExperimentResult, error) {
-	var request input.Start
+func (e Experiments) StartExperiment(c echo.Context) ([]messages.ExperimentResult, error) {
+	var request messages.Start
 
 	err := json.NewDecoder(c.Request().Body).Decode(&request)
 
 	if err != nil {
-		return []output.ExperimentResult{}, echo.ErrBadRequest
+		return []messages.ExperimentResult{}, echo.ErrBadRequest
 	}
 
 	response, err := e.Orquestrator.StartExperiment(request)
 
 	if err != nil {
-		return []output.ExperimentResult{}, echo.ErrInternalServerError
+		return []messages.ExperimentResult{}, echo.ErrInternalServerError
 	}
 
 	return response, nil

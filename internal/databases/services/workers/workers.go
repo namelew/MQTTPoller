@@ -1,10 +1,10 @@
 package workers
 
 import (
-	"github.com/namelew/mqtt-bm-latency/databases"
-	"github.com/namelew/mqtt-bm-latency/databases/filters"
-	"github.com/namelew/mqtt-bm-latency/databases/models"
-	"github.com/namelew/mqtt-bm-latency/logs"
+	"github.com/namelew/mqtt-bm-latency/internal/databases"
+	"github.com/namelew/mqtt-bm-latency/internal/databases/filters"
+	"github.com/namelew/mqtt-bm-latency/internal/databases/models"
+	"github.com/namelew/mqtt-bm-latency/packages/logs"
 )
 
 type Workers struct {

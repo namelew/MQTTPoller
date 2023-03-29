@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/controllers"
-	"github.com/namelew/mqtt-bm-latency/logs"
-	"github.com/namelew/mqtt-bm-latency/network/mqtt"
-	"github.com/namelew/mqtt-bm-latency/orquestration"
+	"github.com/namelew/mqtt-bm-latency/internal/controllers"
+	"github.com/namelew/mqtt-bm-latency/packages/logs"
+	"github.com/namelew/mqtt-bm-latency/packages/network"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestration"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	var oLog = logs.Build("orquestrator.log")
 	oLog.Create()
 
-	orquestrator := orquestration.Build(&mqtt.Client{
+	orquestrator := orquestration.Build(&network.Client{
 		Broker: *broker,
 		ID:     "Orquestrator",
 		KA:     time.Second * 1000,
