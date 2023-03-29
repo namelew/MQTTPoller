@@ -3,7 +3,8 @@ FROM golang:1.17.13-alpine as base
 WORKDIR /app
 COPY dump /app/
 
-RUN apk update; apk add make; make
+RUN apk update
+RUN go build -o bin/worker cmd/worker/main.go
 
 FROM alpine:3.17 as binary
 

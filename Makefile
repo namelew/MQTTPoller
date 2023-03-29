@@ -1,16 +1,17 @@
 all: build
 
-docker: build
+docker:
 	git clone https://github.com/namelew/MQTTDistributedBenck images/orquestrator/dump
 	git clone https://github.com/namelew/MQTTDistributedBenck images/worker/dump
 	docker compose up -d
-
-all: build
-
+	docker compose restart orquestrator
+	docker compose restart workers
+	docker compose restart workers-2
+	docker compose restart workers-3
 build:
 	go mod tidy
-	go build -o bin/orquestrator /cmd/orquestrator/main.go
-	go build -o bin/worker /cmd/worker/main.go
+	go build -o bin/orquestrator cmd/orquestrator/main.go
+	go build -o bin/worker cmd/worker/main.go
 clean:
 	rm -rf bin
 	rm -rf images/orquestrator/dump
