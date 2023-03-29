@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/namelew/mqtt-bm-latency/internal/communication"
+	"github.com/namelew/mqtt-bm-latency/internal/worker"
 )
 
 func main() {
@@ -14,5 +14,5 @@ func main() {
 	)
 	flag.Parse()
 
-	communication.Init(*broker, *tool, *loginTimeout, *isUnix)
+	worker.Init(*broker, *tool, *loginTimeout, *isUnix)
 }

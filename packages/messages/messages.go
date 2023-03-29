@@ -2,7 +2,7 @@ package messages
 
 import (
 	"encoding/json"
-	"github.com/namelew/mqtt-bm-latency/internal/databases/models"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
 )
 
 type CommandExperiment struct {

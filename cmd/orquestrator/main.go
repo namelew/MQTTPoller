@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/internal/controllers"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/packages/network"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestration"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 )
 
 func main() {
@@ -25,14 +25,14 @@ func main() {
 	var oLog = logs.Build("orquestrator.log")
 	oLog.Create()
 
-	orquestrator := orquestration.Build(&network.Client{
+	o := orquestrator.Build(&network.Client{
 		Broker: *broker,
 		ID:     "Orquestrator",
 		KA:     time.Second * 1000,
 		Log:    oLog,
 	}, *t_interval)
 
-	err := orquestrator.Init()
+	err := o.Init()
 
 	if err != nil {
 		oLog.Fatal(err.Error())
@@ -44,13 +44,13 @@ func main() {
 
 	go func() {
 		<-c
-		orquestrator.End()
+		o.End()
 		os.Exit(1)
 	}()
 
 	api := echo.New()
 
-	controller := controllers.Build(orquestrator)
+	controller := controllers.Build(o)
 
 	api.GET("/orquestrator/worker", controller.List)
 	api.GET("/orquestrator/worker/:id", controller.Get)
@@ -60,5 +60,5 @@ func main() {
 
 	api.Logger.Fatal(api.Start(":" + *port))
 
-	orquestrator.End()
+	o.End()
 }
