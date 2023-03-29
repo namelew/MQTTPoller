@@ -9,12 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/namelew/mqtt-bm-latency/history"
-	"github.com/namelew/mqtt-bm-latency/messages"
-	"github.com/namelew/mqtt-bm-latency/utils"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/namelew/mqtt-bm-latency/internal/history"
+	"github.com/namelew/mqtt-bm-latency/packages/messages"
+	"github.com/namelew/mqtt-bm-latency/packages/utils"
 )
 
 func (w *Worker) Ping() {
@@ -135,36 +132,6 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 	t.Wait()
 
 	os.Remove("CommandsLog/experiment_" + fmt.Sprint(id) + ".json")
-}
-
-func (w *Worker) Info(arguments messages.Info) {
-	var result messages.InfoDisplay
-
-	log.Register("Collecting info")
-
-	if arguments.DiscDisplay {
-		rootPath := "/"
-		if !w.isUnix {
-			rootPath = "\\"
-		}
-		diskStat, _ := disk.Usage(rootPath)
-		result.Disk = diskStat.Total / 1024 / 1024
-	}
-	if arguments.MemoryDisplay {
-		vmStat, _ := mem.VirtualMemory()
-		result.Ram = vmStat.Total / 1024 / 1024
-	}
-	if arguments.CpuDisplay {
-		cpuStat, _ := cpu.Info()
-		result.Cpu = cpuStat[0].ModelName
-	}
-
-	resp, _ := json.Marshal(result)
-
-	log.Register("Sending info")
-
-	t := w.client.Publish(w.Id+"/Info", byte(1), false, string(resp))
-	t.Wait()
 }
 
 func (w *Worker) KeepAlive() {

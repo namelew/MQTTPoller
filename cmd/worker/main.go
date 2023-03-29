@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/namelew/mqtt-bm-latency/communication"
+	"github.com/namelew/mqtt-bm-latency/internal/communication"
 )
 
 func main() {

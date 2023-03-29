@@ -16,10 +16,10 @@ import (
 	"math/rand"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/namelew/mqtt-bm-latency/communication/logs"
-	"github.com/namelew/mqtt-bm-latency/history"
-	"github.com/namelew/mqtt-bm-latency/messages"
-	"github.com/namelew/mqtt-bm-latency/utils"
+	"github.com/namelew/mqtt-bm-latency/packages/logs"
+	"github.com/namelew/mqtt-bm-latency/internal/history"
+	"github.com/namelew/mqtt-bm-latency/packages/messages"
+	"github.com/namelew/mqtt-bm-latency/packages/utils"
 )
 
 type Worker struct {
@@ -79,7 +79,7 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64) {
 	argf += fmt.Sprintf("%sinterval=%d\n", isNull(arguments.Interval), arguments.Interval)
 	argf += fmt.Sprintf("%ssubscriber_timeout=%d\n", isNull(arguments.SubscriberTimeout), arguments.SubscriberTimeout)
 	argf += fmt.Sprintf("%slog_level=%s\n", isNull(arguments.LogLevel), arguments.LogLevel)
-	argf += fmt.Sprintf("%sexec_time=%d\n", isNull(arguments.Exec_time), arguments.Exec_time)
+	argf += fmt.Sprintf("%sexec_time=%d\n", isNull(arguments.ExecTime), arguments.ExecTime)
 	argf += fmt.Sprintf("%sntp=%s\n", isNull(arguments.Ntp), arguments.Ntp)
 	if arguments.Output {
 		argf += fmt.Sprintf("output=%s\n", "output")
@@ -338,12 +338,6 @@ func Init(broker string, tool string, loginTimeout int, isUnix bool) {
 		}
 
 		switch commd.Name {
-		case "info":
-			var arguments messages.Info
-			jsonObj, _ := json.Marshal(commd.Arguments)
-			json.Unmarshal(jsonObj, &arguments)
-
-			go worker.Info(arguments)
 		case "start":
 			go worker.Start(commd, string(m.Payload()), -1)
 		case "cancel":
