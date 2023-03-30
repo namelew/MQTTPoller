@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"time"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
@@ -108,4 +109,14 @@ func (h *Workers) Get(id int) *models.Worker {
 	}
 
 	return &worker
+}
+
+func (h *Workers) TrashOut(i time.Time) {
+	if (databases.DB.Model(&models.Worker{}).Where("online = ? AND (created_at < ? OR updated_at < ?)", false, i, i).Delete(&models.Worker{})).Error != nil {
+		h.log.Fatal("Unable to remove retired worker")
+	}
+}
+
+func (h *Workers) ID() int {
+	return 1
 }

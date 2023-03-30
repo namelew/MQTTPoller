@@ -1,6 +1,8 @@
 package experiments
 
 import (
+	"time"
+
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
@@ -9,6 +11,8 @@ import (
 type Experiments struct {
 	log *logs.Log
 }
+
+const id = 2
 
 func Build(l *logs.Log) *Experiments {
 	return &Experiments{
@@ -88,4 +92,14 @@ func (h *Experiments) Get(id uint64) models.Experiment {
 	}
 
 	return experiment
+}
+
+func (h *Experiments) TrashOut(i time.Time) {
+	if (databases.DB.Model(&models.Experiment{}).Where("finish = ? AND (created_at < ? OR updated_at < ?)", true, i, i).Delete(&models.Experiment{})).Error != nil {
+		h.log.Fatal("Unable to remove finished experiment")
+	}
+}
+
+func (h *Experiments) ID() int {
+	return id
 }
