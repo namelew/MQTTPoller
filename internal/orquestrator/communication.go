@@ -18,6 +18,7 @@ import (
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/services/experiments"
 	seworkers "github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/services/workers"
+	"github.com/namelew/mqtt-bm-latency/packages/housekeeper"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 	local "github.com/namelew/mqtt-bm-latency/packages/network"
@@ -36,6 +37,7 @@ type Orquestrator struct {
 	experiments *experiments.Experiments
 	client      *local.Client
 	waitGroup   *waitgroup.WaitGroup
+	hk 			*housekeeper.Housekeeper
 	response 	*queue
 	repress 	*queue
 	tolerance   int
@@ -55,6 +57,7 @@ func Build(c *local.Client, t int) *Orquestrator {
 			items: []messages.ExperimentResult{},
 			m: &sync.Mutex{},
 		},
+		hk: housekeeper.New(time.Minute),
 		client:      c,
 		tolerance:   t,
 	}
@@ -153,6 +156,10 @@ func (o Orquestrator) Init() error {
 		}(m.Payload())
 	})
 
+	o.hk.Place(o.experiments)
+	o.hk.Place(o.workers)
+	go o.hk.Start()
+	
 	return nil
 }
 
