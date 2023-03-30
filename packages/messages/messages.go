@@ -22,7 +22,6 @@ type Status struct {
 }
 
 type Experiment struct {
-	Attempts              int    `json:"attempts"`
 	Tool                  string `json:"tool"`
 	Broker                string `json:"broker"`
 	Port                  int    `json:"port"`

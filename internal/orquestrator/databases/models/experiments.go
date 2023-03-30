@@ -15,7 +15,6 @@ type Experiment struct {
 
 type ExperimentDeclaration struct {
 	ID                    uint64 `gorm:"primarykey"`
-	Attempts              int    `json:"attempts"`
 	Tool                  string `json:"tool"`
 	Broker                string `json:"broker"`
 	Port                  int    `json:"port"`

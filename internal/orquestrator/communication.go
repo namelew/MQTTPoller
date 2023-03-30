@@ -253,7 +253,6 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 			Finish: false,
 		},
 		models.ExperimentDeclaration{
-			Attempts: arg.Description.Attempts,
 			Tool: arg.Description.Tool,
 			Broker: arg.Description.Broker,
 			Port: arg.Description.Port,
