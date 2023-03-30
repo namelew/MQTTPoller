@@ -62,34 +62,34 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64) {
 		return ""
 	}
 
-	argf += fmt.Sprintf("%sbroker=%s\n", isNull(arguments.Broker), arguments.Broker)
-	argf += fmt.Sprintf("%sbroker_port=%d\n", isNull(arguments.Port), arguments.Port)
-	argf += fmt.Sprintf("%smqtt_version=%d\n", isNull(arguments.MqttVersion), arguments.MqttVersion)
-	argf += fmt.Sprintf("%snum_publishers=%d\n", isNull(arguments.NumPublishers), arguments.NumPublishers)
-	argf += fmt.Sprintf("%snum_subscribers=%d\n", isNull(arguments.NumSubscriber), arguments.NumSubscriber)
-	argf += fmt.Sprintf("%sqos_publisher=%d\n", isNull(arguments.QosPublisher), arguments.QosPublisher)
-	argf += fmt.Sprintf("%sqos_subscriber=%d\n", isNull(arguments.QosSubscriber), arguments.QosSubscriber)
-	argf += fmt.Sprintf("%sshared_subscription=%t\n", isNull(arguments.SharedSubscrition), arguments.SharedSubscrition)
-	argf += fmt.Sprintf("%sretain=%t\n", isNull(arguments.Retain), arguments.Retain)
-	argf += fmt.Sprintf("%stopic=%s\n", isNull(arguments.Topic), arguments.Topic)
-	argf += fmt.Sprintf("%spayload=%d\n", isNull(arguments.Payload), arguments.Payload)
-	argf += fmt.Sprintf("%snum_messages=%d\n", isNull(arguments.NumMessages), arguments.NumMessages)
-	argf += fmt.Sprintf("%sramp_up=%d\n", isNull(arguments.RampUp), arguments.RampUp)
-	argf += fmt.Sprintf("%sramp_down=%d\n", isNull(arguments.RampDown), arguments.RampDown)
-	argf += fmt.Sprintf("%sinterval=%d\n", isNull(arguments.Interval), arguments.Interval)
-	argf += fmt.Sprintf("%ssubscriber_timeout=%d\n", isNull(arguments.SubscriberTimeout), arguments.SubscriberTimeout)
-	argf += fmt.Sprintf("%slog_level=%s\n", isNull(arguments.LogLevel), arguments.LogLevel)
-	argf += fmt.Sprintf("%sexec_time=%d\n", isNull(arguments.ExecTime), arguments.ExecTime)
-	argf += fmt.Sprintf("%sntp=%s\n", isNull(arguments.Ntp), arguments.Ntp)
-	if arguments.Output {
+	argf += fmt.Sprintf("%sbroker=%s\n", isNull(arguments.Declaration.Broker), arguments.Declaration.Broker)
+	argf += fmt.Sprintf("%sbroker_port=%d\n", isNull(arguments.Declaration.Port), arguments.Declaration.Port)
+	argf += fmt.Sprintf("%smqtt_version=%d\n", isNull(arguments.Declaration.MqttVersion), arguments.Declaration.MqttVersion)
+	argf += fmt.Sprintf("%snum_publishers=%d\n", isNull(arguments.Declaration.NumPublishers), arguments.Declaration.NumPublishers)
+	argf += fmt.Sprintf("%snum_subscribers=%d\n", isNull(arguments.Declaration.NumSubscriber), arguments.Declaration.NumSubscriber)
+	argf += fmt.Sprintf("%sqos_publisher=%d\n", isNull(arguments.Declaration.QosPublisher), arguments.Declaration.QosPublisher)
+	argf += fmt.Sprintf("%sqos_subscriber=%d\n", isNull(arguments.Declaration.QosSubscriber), arguments.Declaration.QosSubscriber)
+	argf += fmt.Sprintf("%sshared_subscription=%t\n", isNull(arguments.Declaration.SharedSubscrition), arguments.Declaration.SharedSubscrition)
+	argf += fmt.Sprintf("%sretain=%t\n", isNull(arguments.Declaration.Retain), arguments.Declaration.Retain)
+	argf += fmt.Sprintf("%stopic=%s\n", isNull(arguments.Declaration.Topic), arguments.Declaration.Topic)
+	argf += fmt.Sprintf("%spayload=%d\n", isNull(arguments.Declaration.Payload), arguments.Declaration.Payload)
+	argf += fmt.Sprintf("%snum_messages=%d\n", isNull(arguments.Declaration.NumMessages), arguments.Declaration.NumMessages)
+	argf += fmt.Sprintf("%sramp_up=%d\n", isNull(arguments.Declaration.RampUp), arguments.Declaration.RampUp)
+	argf += fmt.Sprintf("%sramp_down=%d\n", isNull(arguments.Declaration.RampDown), arguments.Declaration.RampDown)
+	argf += fmt.Sprintf("%sinterval=%d\n", isNull(arguments.Declaration.Interval), arguments.Declaration.Interval)
+	argf += fmt.Sprintf("%ssubscriber_timeout=%d\n", isNull(arguments.Declaration.SubscriberTimeout), arguments.Declaration.SubscriberTimeout)
+	argf += fmt.Sprintf("%slog_level=%s\n", isNull(arguments.Declaration.LogLevel), arguments.Declaration.LogLevel)
+	argf += fmt.Sprintf("%sexec_time=%d\n", isNull(arguments.Declaration.ExecTime), arguments.Declaration.ExecTime)
+	argf += fmt.Sprintf("%sntp=%s\n", isNull(arguments.Declaration.Ntp), arguments.Declaration.Ntp)
+	if arguments.Declaration.Output {
 		argf += fmt.Sprintf("output=%s\n", "output")
 	}
-	argf += fmt.Sprintf("%suser_name=%s\n", isNull(arguments.User), arguments.User)
-	argf += fmt.Sprintf("%spassword=%s\n", isNull(arguments.Password), arguments.Password)
-	argf += fmt.Sprintf("%stls_truststore=%s\n", isNull(arguments.TlsTrustsore), arguments.TlsTrustsore)
-	argf += fmt.Sprintf("%stls_truststore_pass=%s\n", isNull(arguments.TlsTruststorePassword), arguments.TlsTruststorePassword)
-	argf += fmt.Sprintf("%stls_keystore=%s\n", isNull(arguments.TlsKeystore), arguments.TlsKeystore)
-	argf += fmt.Sprintf("%stls_keystore_pass=%s\n", isNull(arguments.TlsKeystorePassword), arguments.TlsKeystorePassword)
+	argf += fmt.Sprintf("%suser_name=%s\n", isNull(arguments.Declaration.User), arguments.Declaration.User)
+	argf += fmt.Sprintf("%spassword=%s\n", isNull(arguments.Declaration.Password), arguments.Declaration.Password)
+	argf += fmt.Sprintf("%stls_truststore=%s\n", isNull(arguments.Declaration.TlsTrustsore), arguments.Declaration.TlsTrustsore)
+	argf += fmt.Sprintf("%stls_truststore_pass=%s\n", isNull(arguments.Declaration.TlsTruststorePassword), arguments.Declaration.TlsTruststorePassword)
+	argf += fmt.Sprintf("%stls_keystore=%s\n", isNull(arguments.Declaration.TlsKeystore), arguments.Declaration.TlsKeystore)
+	argf += fmt.Sprintf("%stls_keystore_pass=%s\n", isNull(arguments.Declaration.TlsKeystorePassword), arguments.Declaration.TlsKeystorePassword)
 
 	// Write bytes to file
 	byteSlice := []byte(argf)
@@ -99,7 +99,7 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64) {
 		f.Close()
 	}
 
-	return arguments.Output, arguments.Expid
+	return arguments.Declaration.Output, arguments.Expid
 }
 
 func extracExperimentResults(output string, createLog bool) messages.ExperimentResult {

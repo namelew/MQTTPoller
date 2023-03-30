@@ -226,34 +226,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	cmd.CommandType = "experiment command"
 
 	experiment.Expid = expid
-	experiment.Attempts = arg.Description.Attempts
-	experiment.Broker = arg.Description.Broker
-	experiment.ExecTime = int(arg.Description.ExecTime)
-	experiment.Interval = int(arg.Description.Interval)
-	experiment.LogLevel = arg.Description.LogLevel
-	experiment.MqttVersion = int(arg.Description.MqttVersion)
-	experiment.Ntp = arg.Description.Ntp
-	experiment.NumMessages = int(arg.Description.NumMessages)
-	experiment.NumPublishers = int(arg.Description.NumPublishers)
-	experiment.NumSubscriber = int(arg.Description.NumSubscriber)
-	experiment.Output = arg.Description.Output
-	experiment.Password = arg.Description.Password
-	experiment.Payload = int(arg.Description.Payload)
-	experiment.Port = int(arg.Description.Port)
-	experiment.QosPublisher = int(arg.Description.QosPublisher)
-	experiment.QosSubscriber = int(arg.Description.QosSubscriber)
-	experiment.RampDown = arg.Description.RampDown
-	experiment.RampUp = arg.Description.RampUp
-	experiment.Retain = arg.Description.Retain
-	experiment.SharedSubscrition = arg.Description.SharedSubscrition
-	experiment.SubscriberTimeout = int(arg.Description.SubscriberTimeout)
-	experiment.TlsKeystore = arg.Description.TlsKeystore
-	experiment.TlsKeystorePassword = arg.Description.TlsKeystorePassword
-	experiment.TlsTrustsore = arg.Description.TlsTrustsore
-	experiment.TlsTruststorePassword = arg.Description.TlsTruststorePassword
-	experiment.Tool = arg.Description.Tool
-	experiment.Topic = arg.Description.Topic
-	experiment.User = arg.Description.User
+	experiment.Declaration = arg.Description
 
 	err := experiment.Attach(&cmd)
 
@@ -272,7 +245,36 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 			ID: uint64(expid),
 			Finish: false,
 		},
-		arg.Description,
+		models.ExperimentDeclaration{
+			Attempts: arg.Description.Attempts,
+			Tool: arg.Description.Tool,
+			Broker: arg.Description.Broker,
+			Port: arg.Description.Port,
+			MqttVersion: arg.Description.MqttVersion,
+			NumPublishers: arg.Description.NumPublishers,
+			NumSubscriber: arg.Description.NumSubscriber,
+			QosPublisher: arg.Description.QosPublisher,
+			QosSubscriber: arg.Description.QosSubscriber,
+			SharedSubscrition: arg.Description.SharedSubscrition,
+			Retain: arg.Description.Retain,
+			Topic: arg.Description.Topic,
+			Payload: arg.Description.Payload,
+			NumMessages: arg.Description.NumMessages,
+			RampUp: arg.Description.RampUp,
+			RampDown: arg.Description.RampDown,
+			Interval: arg.Description.Interval,
+			SubscriberTimeout: arg.Description.SubscriberTimeout,
+			ExecTime: arg.Description.ExecTime,
+			LogLevel: arg.Description.LogLevel,
+			Ntp: arg.Description.Ntp,
+			Output: arg.Description.Output,
+			User: arg.Description.User,
+			Password: arg.Description.Password,
+			TlsTrustsore: arg.Description.TlsTrustsore,
+			TlsTruststorePassword: arg.Description.TlsTruststorePassword,
+			TlsKeystore: arg.Description.TlsKeystore,
+			TlsKeystorePassword: arg.Description.TlsKeystorePassword,
+		},
 		arg.Id...,
 	)
 
