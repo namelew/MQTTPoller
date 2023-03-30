@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"github.com/labstack/echo"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers/experiments"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers/workers"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 )
 
 type Controller struct {
@@ -45,8 +45,8 @@ func (cs Controller) List(c echo.Context) error {
 }
 
 func (cs Controller) Procedure(c echo.Context) error {
-	switch c.Request().URL.Path {
-	case "/orquestrator/experiment/start":
+	switch x := c.Request().URL.Path; {
+	case x == "/orquestrator/experiment/start":
 		resp, err := cs.exp.StartExperiment(c)
 
 		if err != nil {
@@ -54,7 +54,7 @@ func (cs Controller) Procedure(c echo.Context) error {
 		}
 
 		return c.JSON(200, resp)
-	case "/orquestrator/experiment/cancel":
+	case x[:31] == "/orquestrator/experiment/cancel":
 		err := cs.exp.CancelExperiment(c)
 
 		if err != nil {

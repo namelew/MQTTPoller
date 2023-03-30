@@ -350,9 +350,11 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	return o.response.items, nil
 }
 
-// vai precisar de um join
 func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: make(map[string]interface{})}
+
+	cmd.Arguments["id"] = expid
+
 	msg, err := json.Marshal(cmd)
 
 	if err != nil {
@@ -363,7 +365,7 @@ func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 
 	o.client.Send(worker.Token+"/Command", msg)
 
-	o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
+	o.waitGroup.Done()
 
 	return nil
 }
