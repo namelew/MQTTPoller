@@ -18,7 +18,8 @@ func main() {
 	var (
 		port       = flag.String("port", "8000", "api default port")
 		broker     = flag.String("broker", "tcp://localhost:1883", "broker url to worker/orquestrator communication")
-		t_interval = flag.Int("tl", 5, "orquestrator tolerance interval")
+		hk_interval = flag.Int("hk-interval", 1, "housekeeper executions interval in hours")
+		t_interval = flag.Int("tl", 5, "orquestrator tolerance interval in seconds")
 	)
 	flag.Parse()
 
@@ -30,7 +31,7 @@ func main() {
 		ID:     "Orquestrator",
 		KA:     time.Second * 1000,
 		Log:    oLog,
-	}, *t_interval)
+	}, *t_interval, *hk_interval)
 
 	err := o.Init()
 

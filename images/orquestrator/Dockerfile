@@ -9,6 +9,7 @@ RUN go build -o bin/orquestrator cmd/orquestrator/main.go
 FROM alpine:3.17 as binary
 
 ENV tolerance=5
+ENV hkInterval=1
 ENV broker=tcp://localhost:1883
 ENV port=8000
 
@@ -16,4 +17,4 @@ COPY --from=base /app/bin/orquestrator ./app/orquestrator
 
 EXPOSE ${port}
 
-ENTRYPOINT cd /app; ./orquestrator --broker ${broker} --tl ${tolerance} --port ${port}
+ENTRYPOINT cd /app; ./orquestrator --broker ${broker} --tl ${tolerance} --port ${port} --hk-interval ${hkInterval}

@@ -43,7 +43,7 @@ type Orquestrator struct {
 	tolerance   int
 }
 
-func Build(c *local.Client, t int) *Orquestrator {
+func Build(c *local.Client, t int, hki int) *Orquestrator {
 	return &Orquestrator{
 		log:         c.Log,
 		workers:     seworkers.Build(c.Log),
@@ -57,7 +57,7 @@ func Build(c *local.Client, t int) *Orquestrator {
 			items: []messages.ExperimentResult{},
 			m: &sync.Mutex{},
 		},
-		hk: housekeeper.New(time.Minute, c.Log),
+		hk: housekeeper.New(time.Hour * time.Duration(hki), c.Log),
 		client:      c,
 		tolerance:   t,
 	}
