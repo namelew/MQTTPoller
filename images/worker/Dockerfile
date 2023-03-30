@@ -1,4 +1,4 @@
-FROM golang:1.17.13-alpine as base
+FROM golang:1.18-alpine as base
 
 WORKDIR /app
 COPY dump /app/
