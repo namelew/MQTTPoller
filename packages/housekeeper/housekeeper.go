@@ -3,6 +3,8 @@ package housekeeper
 import (
 	"sync"
 	"time"
+
+	"github.com/namelew/mqtt-bm-latency/packages/logs"
 )
 
 type Garbage interface {
@@ -11,15 +13,17 @@ type Garbage interface {
 }
 
 type Housekeeper struct {
+	l 			*logs.Log
 	lock 		*sync.Mutex
 	stock		[]Garbage
 	Interval	time.Duration
 }
 
-func New(i time.Duration) *Housekeeper {
+func New(i time.Duration, l *logs.Log) *Housekeeper {
 	return &Housekeeper{
 		lock: &sync.Mutex{},
 		stock: make([]Garbage, 0),
+		l: l,
 		Interval: i,
 	}
 }
@@ -57,6 +61,7 @@ func (h *Housekeeper) Clear() {
 func (h *Housekeeper) Start() {
 	for {
 		<-time.After(h.Interval)
+		h.l.Register("running housekeeper")
 		limit := time.Now()
 		h.lock.Lock()
 		for i := range h.stock {

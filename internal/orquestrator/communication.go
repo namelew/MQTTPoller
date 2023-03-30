@@ -57,7 +57,7 @@ func Build(c *local.Client, t int) *Orquestrator {
 			items: []messages.ExperimentResult{},
 			m: &sync.Mutex{},
 		},
-		hk: housekeeper.New(time.Minute),
+		hk: housekeeper.New(time.Minute, c.Log),
 		client:      c,
 		tolerance:   t,
 	}
