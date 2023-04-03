@@ -1,8 +1,8 @@
 all: build
 
 docker:
-	git clone https://github.com/namelew/MQTTDistributedBenck images/orquestrator/dump
-	git clone https://github.com/namelew/MQTTDistributedBenck images/worker/dump
+	git clone https://github.com/namelew/MQTTDistributedBench images/orquestrator/dump
+	git clone https://github.com/namelew/MQTTDistributedBench images/worker/dump
 	docker compose up -d
 	docker compose restart orquestrator
 	docker compose restart workers
