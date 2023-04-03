@@ -1,4 +1,4 @@
-# MQTTDistributedBenck - broker latency measure tool
+# MQTTDistributedBench - broker latency measure tool
 Ferramenta feita para gerar testes distribuidos de latência, vazão e perda em redes baseadas no protocolo MQTT. Para isso, é utilizado um nodo principal, chamado orquestrador, para gerenciar nodos trabalhadores, denomidados workers, reponsáveis por executar os experimentos de forma concorrente através de uma ferramenta que pode ser escolhida pelo usuário.
 
 Para a comunicação entre orquestrador e workers, é utilizado o protocolo MQTT. Deve existir um Broker de comunicação conhecido entre ambas as partes para que a aplicação funcione corretamente. O orquestrador deve ser iniciado antes dos workers, pois os workers são incapazes de esperar até ele estar disponível.
@@ -8,7 +8,7 @@ Para a comunicação entre orquestrador e workers, é utilizado o protocolo MQTT
 * Make
 ## Instalação
  ```
-git clone https://github.com/namelew/MQTTDistributedBenck MQTTDB
+git clone https://github.com/namelew/MQTTDistributedBench MQTTDB
 cd MQTTDB
 make
  ```
