@@ -1,0 +1,9 @@
+docker-compose*
+Makefile
+images/
+.gitignore
+mosquitto.confg
+*.log
+*.db
+*.md
+token.bin

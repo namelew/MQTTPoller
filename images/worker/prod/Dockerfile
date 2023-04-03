@@ -1,7 +1,7 @@
 FROM golang:1.18-alpine as base
 
 WORKDIR /app
-COPY dump /app/
+COPY . /app/
 
 RUN apk update
 RUN go build -o bin/worker cmd/worker/main.go

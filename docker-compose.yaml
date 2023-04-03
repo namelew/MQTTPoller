@@ -11,10 +11,8 @@ services:
   orquestrator:
     container_name: orquestrator
     build:
-      context: ./images/orquestrator
-      cache_from:
-        - golang:1.18-alpine
-        - alpine:3.17
+      context: ./
+      dockerfile: ./images/orquestrator/prod/Dockerfile
     image: mqttdb/orquestrator:latest
     deploy:
       resources:
@@ -36,10 +34,8 @@ services:
   workers:
     container_name: worker
     build:
-      context: ./images/worker
-      cache_from:
-        - golang:1.17.13-alpine
-        - alpine:3.17
+      context: ./
+      dockerfile: ./images/worker/prod/Dockerfile
     image: mqttdb/worker:latest
     deploy:
       resources:
@@ -61,10 +57,8 @@ services:
   workers-2:
     container_name: worker-2
     build:
-      context: ./images/worker
-      cache_from:
-        - golang:1.17.13-alpine
-        - alpine:3.17
+      context: ./
+      dockerfile: ./images/worker/prod/Dockerfile
     image: mqttdb/worker:latest
     deploy:
       resources:
@@ -86,10 +80,8 @@ services:
   workers-3:
     container_name: worker-3
     build:
-      context: ./images/worker
-      cache_from:
-        - golang:1.17.13-alpine
-        - alpine:3.17
+      context: ./
+      dockerfile: ./images/worker/prod/Dockerfile
     image: mqttdb/worker:latest
     deploy:
       resources:
