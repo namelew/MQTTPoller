@@ -9,7 +9,7 @@ tmp_dir = "tmp"
 # Just plain old shell command. You could use `make` as well.
 cmd = "go build -o ./tmp/orquestrator ./cmd/orquestrator/"
 # Binary file yields from `cmd`.
-bin = "/tmp/orquestrator"
+bin = "./tmp/orquestrator"
 # Customize binary, can setup environment variables when run your app.
 full_bin = "APP_ENV=dev APP_USER=air ./tmp/orquestrator"
 # Watch these filename extensions.

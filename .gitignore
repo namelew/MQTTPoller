@@ -12,3 +12,4 @@ dump
 *.conf
 *.bin
 *.log
+tmp/
