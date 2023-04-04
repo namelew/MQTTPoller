@@ -110,12 +110,12 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 
 	resultsExperiment := extracExperimentResults(output.String(), createLogFile)
 
-	if resultsExperiment.Publish.AvgThroughput == 0 {
-		mess, _ = json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: "Error 10: Hardware Colapse", Attr: messages.Command{}})
+	if resultsExperiment.Meta.ExperimentError != "" {
+		mess, _ = json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: resultsExperiment.Meta.ExperimentError, Attr: messages.Command{}})
 		t = w.client.Publish(w.Id+"/Experiments/Status", byte(1), true, string(mess))
 		t.Wait()
 
-		log.Register("Error experiment " + strconv.FormatInt(id, 10) + " hardware colapse")
+		log.Register("Error experiment: " + resultsExperiment.Meta.ExperimentError)
 	} else {
 		mess, _ = json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: "finish", Attr: messages.Command{}})
 		t = w.client.Publish(w.Id+"/Experiments/Status", byte(1), true, string(mess))
