@@ -16,8 +16,8 @@ import (
 	"math/rand"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/internal/worker/history"
+	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 	"github.com/namelew/mqtt-bm-latency/packages/utils"
 )
@@ -109,10 +109,14 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 	temp := [12]string{}
 
 	i := 0
-
 	for _, s := range strings.Split(output, "\n") {
 		if s != "" && s[0] != '-' {
-			temp[i] = strings.Split(s, ": ")[1]
+			data := strings.Split(s, ": ")
+			if data[0] == "ERROR" {
+				results.Meta.ExperimentError = data[1]
+				return results
+			}
+			temp[i] = data[1]
 			i++
 		}
 	}
