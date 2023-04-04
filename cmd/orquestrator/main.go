@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"github.com/labstack/echo"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/packages/network"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 )
 
 func main() {
 	var (
-		port       = flag.String("port", "8000", "api default port")
-		broker     = flag.String("broker", "tcp://localhost:1883", "broker url to worker/orquestrator communication")
+		port        = flag.String("port", "8000", "api default port")
+		broker      = flag.String("broker", "tcp://localhost:1883", "broker url to worker/orquestrator communication")
 		hk_interval = flag.Int("hk-interval", 1, "housekeeper executions interval in hours")
-		t_interval = flag.Int("tl", 5, "orquestrator tolerance interval in seconds")
+		t_interval  = flag.Int("tl", 5, "orquestrator tolerance interval in seconds")
 	)
 	flag.Parse()
 

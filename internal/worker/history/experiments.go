@@ -2,60 +2,61 @@ package history
 
 import (
 	"os"
+
 	"github.com/namelew/mqtt-bm-latency/packages/utils"
 )
 
-type OngoingExperiments struct{
+type OngoingExperiments struct {
 	root *OngoingExperiment
 }
 
-type OngoingExperiment struct{
-	Id int64
+type OngoingExperiment struct {
+	Id       int64
 	Finished bool
-	Proc *os.Process
-	height int
-	right *OngoingExperiment 
-	left *OngoingExperiment
+	Proc     *os.Process
+	height   int
+	right    *OngoingExperiment
+	left     *OngoingExperiment
 }
 
-func CreateRegister(id int64, proc *os.Process) OngoingExperiment{
+func CreateRegister(id int64, proc *os.Process) OngoingExperiment {
 	return OngoingExperiment{id, false, proc, 1, nil, nil}
 }
 
-func (tree *OngoingExperiments) Add(node *OngoingExperiment){
-	if tree.root == nil{
+func (tree *OngoingExperiments) Add(node *OngoingExperiment) {
+	if tree.root == nil {
 		tree.root = node
-	} else{
+	} else {
 		tree.root.add(node)
 	}
 	tree.root = tree.root.rebalanceTree()
 }
 
-func (node *OngoingExperiment) add(newNode *OngoingExperiment){
-	if newNode.Id <= node.Id{
-		if node.left == nil{
+func (node *OngoingExperiment) add(newNode *OngoingExperiment) {
+	if newNode.Id <= node.Id {
+		if node.left == nil {
 			node.left = newNode
-		}else{
+		} else {
 			node.left.add(newNode)
 		}
-	} else{
-		if node.right == nil{
+	} else {
+		if node.right == nil {
 			node.right = newNode
-		} else{
+		} else {
 			node.right.add(newNode)
 		}
 	}
 }
 
-func (tree *OngoingExperiments) Remove(id int64){
-	tree.root  = tree.root.remove(id)
+func (tree *OngoingExperiments) Remove(id int64) {
+	tree.root = tree.root.remove(id)
 }
 
-func (tree *OngoingExperiments) Search(id int64) *OngoingExperiment{
+func (tree *OngoingExperiments) Search(id int64) *OngoingExperiment {
 	return tree.root.search(id)
 }
 
-func (node *OngoingExperiment) search(id int64) *OngoingExperiment{
+func (node *OngoingExperiment) search(id int64) *OngoingExperiment {
 	if node == nil {
 		return nil
 	}

@@ -2,6 +2,7 @@ package workers
 
 import (
 	"time"
+
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
@@ -52,7 +53,7 @@ func (h *Workers) Update(id uint, new models.Worker) {
 	go func() {
 		var worker models.Worker
 
-		if err := (databases.DB.Model(&models.Worker{}).Where("id = ?",id).Find(&worker)).Error; err != nil {
+		if err := (databases.DB.Model(&models.Worker{}).Where("id = ?", id).Find(&worker)).Error; err != nil {
 			cerr <- err
 		}
 

@@ -4,15 +4,15 @@ import "sync"
 
 type WaitGroup struct {
 	members int
-	done chan interface{}
-	m *sync.Mutex
+	done    chan interface{}
+	m       *sync.Mutex
 }
 
-func New() *WaitGroup{
+func New() *WaitGroup {
 	return &WaitGroup{
 		members: 0,
-		done: make(chan interface{}, 1),
-		m: &sync.Mutex{},
+		done:    make(chan interface{}, 1),
+		m:       &sync.Mutex{},
 	}
 }
 
@@ -28,7 +28,7 @@ func (w *WaitGroup) Done() {
 	if w.members > 0 {
 		w.members--
 	}
-		
+
 	if w.members <= 0 {
 		w.done <- true
 	}
@@ -37,5 +37,5 @@ func (w *WaitGroup) Done() {
 }
 
 func (w *WaitGroup) Wait() {
-	<- w.done
+	<-w.done
 }

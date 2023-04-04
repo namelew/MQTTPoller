@@ -13,17 +13,17 @@ type Garbage interface {
 }
 
 type Housekeeper struct {
-	l 			*logs.Log
-	lock 		*sync.Mutex
-	stock		[]Garbage
-	Interval	time.Duration
+	l        *logs.Log
+	lock     *sync.Mutex
+	stock    []Garbage
+	Interval time.Duration
 }
 
 func New(i time.Duration, l *logs.Log) *Housekeeper {
 	return &Housekeeper{
-		lock: &sync.Mutex{},
-		stock: make([]Garbage, 0),
-		l: l,
+		lock:     &sync.Mutex{},
+		stock:    make([]Garbage, 0),
+		l:        l,
 		Interval: i,
 	}
 }
@@ -37,7 +37,7 @@ func (h *Housekeeper) Place(n Garbage) {
 func (h *Housekeeper) Remove(id int) {
 	h.lock.Lock()
 	el := -1
-    for i := range h.stock{
+	for i := range h.stock {
 		if h.stock[i].ID() == id {
 			el = i
 			break
@@ -45,8 +45,8 @@ func (h *Housekeeper) Remove(id int) {
 	}
 
 	if el != -1 {
-		h.stock[el] = h.stock[len(h.stock) - 1]
-		h.stock = h.stock[:len(h.stock) - 1]
+		h.stock[el] = h.stock[len(h.stock)-1]
+		h.stock = h.stock[:len(h.stock)-1]
 	}
 
 	h.lock.Unlock()

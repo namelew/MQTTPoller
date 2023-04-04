@@ -5,8 +5,8 @@ import (
 )
 
 type CommandExperiment struct {
-	Expid		int64 		`json:"expid"`
-	Declaration	Experiment 	`json:"declaration"`
+	Expid       int64      `json:"expid"`
+	Declaration Experiment `json:"declaration"`
 }
 
 type Command struct {
@@ -118,7 +118,7 @@ func (cmd *Command) ToCommandExperiment() *CommandExperiment {
 	return &cExp
 }
 
-func (cmdExp *CommandExperiment) Attach(cmd *Command) error{
+func (cmdExp *CommandExperiment) Attach(cmd *Command) error {
 	data, err := json.Marshal(cmdExp)
 
 	if err != nil {

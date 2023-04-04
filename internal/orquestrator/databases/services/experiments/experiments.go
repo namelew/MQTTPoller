@@ -22,9 +22,9 @@ func Build(l *logs.Log) *Experiments {
 
 func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, wid ...int) {
 	var wkrs []models.Worker
-	var declaration,empty models.ExperimentDeclaration
+	var declaration, empty models.ExperimentDeclaration
 
-	if len(wid) <= 1 || wid[0] == -1{
+	if len(wid) <= 1 || wid[0] == -1 {
 		if (databases.DB.Find(&wkrs)).Error != nil {
 			h.log.Fatal("Unable to find workers")
 		}
