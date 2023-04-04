@@ -348,6 +348,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 	if len(o.response.items) < nwkrs {
 		o.response.m.Unlock()
+		go o.experiments.Update(uint64(expid), models.Experiment{Finish: true, Error: fmt.Sprintf("%d workers have failed to run the experiment", nwkrs-len(o.response.items))})
 		return o.response.items, errors.New("failed to run experiment")
 	}
 
