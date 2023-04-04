@@ -28,7 +28,7 @@ import (
 
 type queue struct {
 	items []messages.ExperimentResult
-	m *sync.Mutex
+	m     *sync.Mutex
 }
 
 type Orquestrator struct {
@@ -37,9 +37,9 @@ type Orquestrator struct {
 	experiments *experiments.Experiments
 	client      *local.Client
 	waitGroup   *waitgroup.WaitGroup
-	hk 			*housekeeper.Housekeeper
-	response 	*queue
-	repress 	*queue
+	hk          *housekeeper.Housekeeper
+	response    *queue
+	repress     *queue
 	tolerance   int
 }
 
@@ -48,18 +48,18 @@ func Build(c *local.Client, t int, hki int) *Orquestrator {
 		log:         c.Log,
 		workers:     seworkers.Build(c.Log),
 		experiments: experiments.Build(c.Log),
-		waitGroup: waitgroup.New(),
+		waitGroup:   waitgroup.New(),
 		response: &queue{
 			items: []messages.ExperimentResult{},
-			m: &sync.Mutex{},
+			m:     &sync.Mutex{},
 		},
 		repress: &queue{
 			items: []messages.ExperimentResult{},
-			m: &sync.Mutex{},
+			m:     &sync.Mutex{},
 		},
-		hk: housekeeper.New(time.Hour * time.Duration(hki), c.Log),
-		client:      c,
-		tolerance:   t,
+		hk:        housekeeper.New(time.Hour*time.Duration(hki), c.Log),
+		client:    c,
+		tolerance: t,
 	}
 }
 
@@ -71,12 +71,12 @@ func (o Orquestrator) GetWorker(id int) *models.Worker {
 	return o.workers.Get(id)
 }
 
-func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func (t context.Context, tk, tp string,tl int)) {
+func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func(t context.Context, tk, tp string, tl int)) {
 	timer, cancel := context.WithCancel(context.Background())
 
 	o.client.Register(t.OID+t.Topic, 1, true, func(c paho.Client, m paho.Message) {
 		cancel()
-		go o.timeout(t,timeHandler)
+		go o.timeout(t, timeHandler)
 	})
 
 	go timeHandler(timer, t.OID, t.Topic, t.Tolerance)
@@ -109,11 +109,11 @@ func (o Orquestrator) Init() error {
 			o.client.Send("Orquestrator/Register/Log", worker+"-"+clientID)
 
 			go o.timeout(&tout.Timeout{
-				OID: clientID,
-				Topic: "/KeepAlive",
-				RecLimit: -1,
+				OID:       clientID,
+				Topic:     "/KeepAlive",
+				RecLimit:  -1,
 				Tolerance: o.tolerance,
-			}, func(t context.Context, tk, tp string,tl int) {
+			}, func(t context.Context, tk, tp string, tl int) {
 				select {
 				case <-t.Done():
 					return
@@ -139,11 +139,11 @@ func (o Orquestrator) Init() error {
 			o.client.Send(token+"/Login/Log", "true")
 
 			go o.timeout(&tout.Timeout{
-				OID: token,
-				Topic: "/KeepAlive",
-				RecLimit: -1,
+				OID:       token,
+				Topic:     "/KeepAlive",
+				RecLimit:  -1,
 				Tolerance: o.tolerance,
-			}, func(t context.Context, tk, tp string,tl int) {
+			}, func(t context.Context, tk, tp string, tl int) {
 				select {
 				case <-t.Done():
 					return
@@ -159,7 +159,7 @@ func (o Orquestrator) Init() error {
 	o.hk.Place(o.experiments)
 	o.hk.Place(o.workers)
 	go o.hk.Start()
-	
+
 	return nil
 }
 
@@ -181,7 +181,7 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 			log.Fatal(err.Error())
 		}
 
-		exp :=  o.experiments.Get(output.Meta.ID)
+		exp := o.experiments.Get(output.Meta.ID)
 
 		if exp.Finish {
 			o.repress.m.Lock()
@@ -228,6 +228,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 	var cmd messages.Command
 	var experiment messages.CommandExperiment
+	var nwkrs int = 0
 
 	cmd.Name = "start"
 	cmd.CommandType = "experiment command"
@@ -249,37 +250,37 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 	o.experiments.Add(
 		models.Experiment{
-			ID: uint64(expid),
+			ID:     uint64(expid),
 			Finish: false,
 		},
 		models.ExperimentDeclaration{
-			Tool: arg.Description.Tool,
-			Broker: arg.Description.Broker,
-			Port: arg.Description.Port,
-			MqttVersion: arg.Description.MqttVersion,
-			NumPublishers: arg.Description.NumPublishers,
-			NumSubscriber: arg.Description.NumSubscriber,
-			QosPublisher: arg.Description.QosPublisher,
-			QosSubscriber: arg.Description.QosSubscriber,
-			SharedSubscrition: arg.Description.SharedSubscrition,
-			Retain: arg.Description.Retain,
-			Topic: arg.Description.Topic,
-			Payload: arg.Description.Payload,
-			NumMessages: arg.Description.NumMessages,
-			RampUp: arg.Description.RampUp,
-			RampDown: arg.Description.RampDown,
-			Interval: arg.Description.Interval,
-			SubscriberTimeout: arg.Description.SubscriberTimeout,
-			ExecTime: arg.Description.ExecTime,
-			LogLevel: arg.Description.LogLevel,
-			Ntp: arg.Description.Ntp,
-			Output: arg.Description.Output,
-			User: arg.Description.User,
-			Password: arg.Description.Password,
-			TlsTrustsore: arg.Description.TlsTrustsore,
+			Tool:                  arg.Description.Tool,
+			Broker:                arg.Description.Broker,
+			Port:                  arg.Description.Port,
+			MqttVersion:           arg.Description.MqttVersion,
+			NumPublishers:         arg.Description.NumPublishers,
+			NumSubscriber:         arg.Description.NumSubscriber,
+			QosPublisher:          arg.Description.QosPublisher,
+			QosSubscriber:         arg.Description.QosSubscriber,
+			SharedSubscrition:     arg.Description.SharedSubscrition,
+			Retain:                arg.Description.Retain,
+			Topic:                 arg.Description.Topic,
+			Payload:               arg.Description.Payload,
+			NumMessages:           arg.Description.NumMessages,
+			RampUp:                arg.Description.RampUp,
+			RampDown:              arg.Description.RampDown,
+			Interval:              arg.Description.Interval,
+			SubscriberTimeout:     arg.Description.SubscriberTimeout,
+			ExecTime:              arg.Description.ExecTime,
+			LogLevel:              arg.Description.LogLevel,
+			Ntp:                   arg.Description.Ntp,
+			Output:                arg.Description.Output,
+			User:                  arg.Description.User,
+			Password:              arg.Description.Password,
+			TlsTrustsore:          arg.Description.TlsTrustsore,
 			TlsTruststorePassword: arg.Description.TlsTruststorePassword,
-			TlsKeystore: arg.Description.TlsKeystore,
-			TlsKeystorePassword: arg.Description.TlsKeystorePassword,
+			TlsKeystore:           arg.Description.TlsKeystore,
+			TlsKeystorePassword:   arg.Description.TlsKeystorePassword,
 		},
 		arg.Id...,
 	)
@@ -287,7 +288,9 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	if arg.Id[0] == -1 {
 		workers := o.workers.List(nil)
 
-		o.waitGroup.Add(len(workers))
+		nwkrs = len(workers)
+
+		o.waitGroup.Add(nwkrs)
 
 		for i := range workers {
 			if !workers[i].Online {
@@ -311,11 +314,13 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	} else {
 		workers := make([]*models.Worker, 10)
 
-		for _,i := range arg.Id {
+		for _, i := range arg.Id {
 			workers = append(workers, o.workers.Get(i))
 		}
 
-		o.waitGroup.Add(len(workers))
+		nwkrs = len(workers)
+
+		o.waitGroup.Add(nwkrs)
 
 		for i := range workers {
 			if !workers[i].Online {
@@ -340,6 +345,12 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	o.waitGroup.Wait()
 
 	o.response.m.Lock()
+
+	if len(o.response.items) < nwkrs {
+		o.response.m.Unlock()
+		return o.response.items, errors.New("failed to run experiment")
+	}
+
 	o.repress.m.Lock()
 	o.response.items = append(o.response.items, o.repress.items...)
 	o.response.m.Unlock()
@@ -348,10 +359,6 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	o.repress.m.Unlock()
 
 	go o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
-
-	if len(o.response.items) == 0{
-		return o.response.items, errors.New("failed to run experiment")
-	}
 
 	return o.response.items, nil
 }

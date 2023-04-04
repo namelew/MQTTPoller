@@ -42,6 +42,13 @@ services:
       - ./:/app
     depends_on:
       - orquestrator
+  target:
+    container_name: test_broker
+    image: eclipse-mosquitto:latest
+    volumes:
+     - ./mosquitto.confg:/mosquitto/config/mosquitto.conf
+    networks:
+     - example_experiment_network
 networks:
   example_experiment_network:
     driver: bridge
