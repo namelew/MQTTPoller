@@ -15,4 +15,6 @@ ENV broker=tcp://localhost:1883
 COPY --from=base /app/bin/worker ./app/worker
 COPY --from=base /app/tools ./app/tools
 
+RUN apk add openjdk8
+
 ENTRYPOINT cd app; ./worker --broker ${broker} --tool ${tool} --login_t ${login_t}

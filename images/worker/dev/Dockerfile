@@ -9,5 +9,6 @@ RUN go install github.com/cosmtrek/air@latest
 COPY . .
 
 RUN go mod download github.com/namelew/mqtt-bm-latency
+RUN apk add openjdk8
 
 ENTRYPOINT ["air", "-c", "worker.air.toml"]
