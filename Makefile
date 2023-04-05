@@ -2,9 +2,7 @@ all: build
 
 example:
 	docker compose up -d
-	docker compose restart workers
-	docker compose restart workers-2
-	docker compose restart workers-3
+	docker compose logs -f
 dev:
 	docker compose -f ./docker-compose-dev.yaml up -d
 build:

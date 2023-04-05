@@ -42,7 +42,7 @@ kill_delay = 500 # ms
 rerun = false
 # Delay after each executions
 rerun_delay = 500
-args_bin=["--broker", "$broker", "--tl", "$tolerance", "--port", "$port", "--hk-interval", "$hkInterval"]
+args_bin=["--broker", "$BROKER", "--tl", "$TOLERANCE", "--port", "$PORT", "--hk-interval", "$HKINTERVAL"]
 
 [log]
 # Show log time

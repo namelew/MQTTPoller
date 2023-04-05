@@ -3,10 +3,10 @@ FROM golang:1.18-alpine as base
 WORKDIR /app
 COPY . .
 
-ENV tolerance=5
-ENV hkInterval=1
-ENV broker=tcp://localhost:1883
-ENV port=8000
+ENV TOLERANCE=5
+ENV HKINTERVAL=1
+ENV BROKER=tcp://localhost:1883
+ENV PORT=8000
 
 RUN apk update; apk add build-base
 RUN go install github.com/cosmtrek/air@latest

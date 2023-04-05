@@ -1,6 +1,7 @@
 FROM golang:1.18-alpine as base
 
-ENV broker=tcp://localhost:1883
+ENV BROKER=tcp://localhost:1883
+ENV LTHRESHOUT=1
 
 WORKDIR /app
 

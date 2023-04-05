@@ -26,7 +26,6 @@ type Worker struct {
 	Id     string
 	tool   string
 	broker string
-	isUnix bool
 	client mqtt.Client
 }
 
@@ -180,117 +179,97 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 	return results
 }
 
-func getToken() (string, bool, bool, bool) {
+func getToken() (string, bool) {
 	var seed rand.Source
 	var random *rand.Rand
-	var makeRegister bool
-	var login_confirmation bool
-	var register_confirmation bool
 	var token string = "Client_"
 
-	if !utils.FileExists("token.bin") {
+	makeRegister := utils.FileExists("token.bin")
+
+	if !makeRegister {
 		for i := 0; i < 10; i++ {
 			seed = rand.NewSource(time.Now().UnixNano())
 			random = rand.New(seed)
 			token += fmt.Sprintf("%d", random.Int()%10)
 		}
-		makeRegister = true
-		login_confirmation = true
 	} else {
 		data, _ := os.ReadFile("token.bin")
 		token = strings.Split(string(data), "\n")[0]
-		register_confirmation = true
 	}
 
-	return token, makeRegister, login_confirmation, register_confirmation
+	return token, makeRegister
 }
 
-func authentication(w *Worker, loginTimeout int, makeRegister bool, login_confirmation bool, register_confirmation bool) {
-	token := w.client.Subscribe(w.Id+"/Login/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		login_confirmation = true
-	})
-	token.Wait()
-
-	token = w.client.Subscribe("Orquestrator/Register/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		response := strings.Split(string(m.Payload()), "-")
-
-		if response[0] != w.Id {
-			mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline registration fail", Attr: messages.Command{}})
-			token = w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
-			token.Wait()
-			w.client.Disconnect(0)
-			log.Register("Shutdown register failure")
-			os.Exit(0)
-			return
-		}
-
-		var f *os.File
-
-		if !utils.FileExists("token.bin") {
-			f, _ = os.Create("token.bin")
-		} else {
-			f, _ = os.Open("token.bin")
-		}
-		f.Truncate(0)
-		f.Write([]byte(response[1]))
-
-		f.Close()
-		register_confirmation = true
-	})
-	token.Wait()
+func authentication(w *Worker, loginTimeout, loginThreshold int, makeRegister bool) {
+	confirmation := make(chan bool, 1)
 
 	if makeRegister {
+		token := w.client.Subscribe("Orquestrator/Register/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
+			response := strings.Split(string(m.Payload()), "-")
+	
+			if response[0] != w.Id {
+				mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline registration fail", Attr: messages.Command{}})
+				token := w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
+				token.Wait()
+				w.client.Disconnect(0)
+				log.Register("Shutdown register failure")
+				os.Exit(0)
+				return
+			}
+	
+			var f *os.File
+	
+			if !utils.FileExists("token.bin") {
+				f, _ = os.Create("token.bin")
+			} else {
+				f, _ = os.Open("token.bin")
+			}
+			f.Truncate(0)
+			f.Write([]byte(response[1]))
+	
+			f.Close()
+			confirmation <- true
+		})
+		token.Wait()
+
 		token = w.client.Publish("Orquestrator/Register", byte(1), false, w.Id)
 		token.Wait()
-
-		cd := 0
-		for !register_confirmation {
-			if cd >= loginTimeout {
-				break
-			}
-			time.Sleep(time.Second)
-			cd++
-		}
 	} else {
+		token := w.client.Subscribe(w.Id+"/Login/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
+			confirmation <- true
+		})
+		token.Wait()
+
 		token = w.client.Publish("Orquestrator/Login", byte(1), false, w.Id)
 		token.Wait()
+	}
 
-		cd := 0
-		log.Register("Waiting login confirmation")
-		for !login_confirmation {
-			if cd >= loginTimeout {
-				break
-			}
-			time.Sleep(time.Second)
-			cd++
+	go func ()  {
+		<-time.After(time.Second * time.Duration(loginTimeout))
+		confirmation <- false	
+	}()
+
+	if !<-confirmation {
+		if loginThreshold > 1 {
+			authentication(w,loginTimeout, loginThreshold - 1, makeRegister)
+			return
 		}
-	}
-
-	if !login_confirmation {
-		mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline login fail", Attr: messages.Command{}})
-		token = w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
+		mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline auth fail", Attr: messages.Command{}})
+		token := w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
 		token.Wait()
 		w.client.Disconnect(0)
-		log.Register("Shutdown login failure")
+		log.Register("Shutdown auth failure")
 		os.Exit(0)
 	}
 
-	if !register_confirmation {
-		mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline registration fail", Attr: messages.Command{}})
-		token = w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
-		token.Wait()
-		w.client.Disconnect(0)
-		log.Register("Shutdown register failure")
-		os.Exit(0)
-	}
-	log.Register("Login sucess")
+	log.Register("Auth sucess")
 }
 
-func Init(broker string, tool string, loginTimeout int, isUnix bool) {
+func Init(broker string, tool string, loginTimeout, loginThreshold int) {
 	log.Create()
 
 	log.Register("Preparing authentication token")
-	wtoken, makeRegister, login_confirmation, register_confirmation := getToken()
+	wtoken, makeRegister := getToken()
 
 	log.Register("Configuring mqtt paho client")
 	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
@@ -307,7 +286,6 @@ func Init(broker string, tool string, loginTimeout int, isUnix bool) {
 	worker := Build()
 	worker.broker = broker
 	worker.tool = tool
-	worker.isUnix = isUnix
 	worker.client = mqtt.NewClient(opts)
 	worker.Id = wtoken
 
@@ -317,7 +295,7 @@ func Init(broker string, tool string, loginTimeout int, isUnix bool) {
 	tokenConnection.Wait()
 
 	log.Register("Authenticate token")
-	authentication(worker, loginTimeout, makeRegister, login_confirmation, register_confirmation)
+	authentication(worker, loginTimeout, loginThreshold, makeRegister)
 
 	log.Register("Warning orquestrator that worker is online")
 	mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "online", Attr: messages.Command{}})

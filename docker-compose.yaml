@@ -34,8 +34,8 @@ services:
     networks:
      - example_experiment_network
     environment:
-      - tolerance=5
-      - broker=tcp://mosquitto_broker:1883
+      - TOLERANCE=5
+      - BROKER=tcp://mosquitto_broker:1883
     depends_on:
       - broker
   workers:
@@ -55,10 +55,10 @@ services:
     networks:
      - example_experiment_network
     environment:
-      - broker=tcp://mosquitto_broker:1883
-      - login_t=30
-      - timeout=5
-      - tool=source/tools/mqttloader/bin/mqttloader
+      - BROKER=tcp://mosquitto_broker:1883
+      - LTIMEOUT=30
+      - LTHRESHOUT=3
+      - TOOL=source/tools/mqttloader/bin/mqttloader
     depends_on:
       - orquestrator
   workers-2:
@@ -78,10 +78,10 @@ services:
     networks:
      - example_experiment_network
     environment:
-      - broker=tcp://mosquitto_broker:1883
-      - login_t=30
-      - timeout=5
-      - tool=source/tools/mqttloader/bin/mqttloader
+      - BROKER=tcp://mosquitto_broker:1883
+      - LTIMEOUT=30
+      - LTHRESHOUT=3
+      - TOOL=source/tools/mqttloader/bin/mqttloader
     depends_on:
       - orquestrator
   workers-3:
@@ -101,10 +101,10 @@ services:
     networks:
      - example_experiment_network
     environment:
-      - broker=tcp://mosquitto_broker:1883
-      - login_t=30
-      - timeout=5
-      - tool=source/tools/mqttloader/bin/mqttloader
+      - BROKER=tcp://mosquitto_broker:1883
+      - LTIMEOUT=30
+      - LTHRESHOUT=3
+      - TOOL=source/tools/mqttloader/bin/mqttloader
     depends_on:
       - orquestrator
 networks:
