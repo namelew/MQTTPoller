@@ -184,9 +184,9 @@ func getToken() (string, bool) {
 	var random *rand.Rand
 	var token string = "Client_"
 
-	makeRegister := utils.FileExists("token.bin")
+	makeRegister := !utils.FileExists("token.bin")
 
-	if !makeRegister {
+	if makeRegister {
 		for i := 0; i < 10; i++ {
 			seed = rand.NewSource(time.Now().UnixNano())
 			random = rand.New(seed)
