@@ -9,7 +9,7 @@ RUN go build -o bin/worker cmd/worker/main.go
 FROM alpine:3.17 as binary
 
 ENV LTIMEOUT=30
-ENV LTHRESHOUT=1
+ENV LTHRESHOUT=-1
 ENV TOOL=./tools/mqttloader/bin/mqttloader
 ENV BROKER=tcp://localhost:1883
 

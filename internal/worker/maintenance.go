@@ -254,6 +254,12 @@ func authentication(w *Worker, loginTimeout, loginThreshold int, makeRegister bo
 			authentication(w,loginTimeout, loginThreshold - 1, makeRegister)
 			return
 		}
+
+		if loginThreshold < 0 {
+			authentication(w,loginTimeout, loginThreshold, makeRegister)
+			return
+		}
+		
 		mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline auth fail", Attr: messages.Command{}})
 		token := w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
 		token.Wait()

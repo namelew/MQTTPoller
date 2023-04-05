@@ -36,7 +36,7 @@ services:
     environment:
       - BROKER=tcp://mosquitto_broker:1883
       - LTIMEOUT=30
-      - LTHRESHOUT=3
+      - LTHRESHOUT=-1
       - TOOL=source/tools/mqttloader/bin/mqttloader
     volumes:
       - ./:/app
