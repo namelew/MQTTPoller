@@ -100,29 +100,13 @@ func (o Orquestrator) Init() error {
 				clientID += fmt.Sprintf("%d", random.Int()%10)
 			}
 
-			o.workers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: true, Experiments: nil})
+			o.workers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: false, Experiments: nil})
 
 			o.setMessageHandler(&clientID)
 
 			o.log.Register("worker " + worker + " registed as " + clientID)
 
 			o.client.Send("Orquestrator/Register/Log", worker+"-"+clientID)
-
-			go o.timeout(&tout.Timeout{
-				OID:       clientID,
-				Topic:     "/KeepAlive",
-				RecLimit:  -1,
-				Tolerance: o.tolerance,
-			}, func(t context.Context, tk, tp string, tl int) {
-				select {
-				case <-t.Done():
-					return
-				case <-time.After(time.Second * time.Duration(tl)):
-					o.client.Unregister(tk + tp)
-					o.log.Register("lost connection with worker " + tk)
-					o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
-				}
-			})
 		}(m.Payload())
 	})
 
