@@ -52,9 +52,9 @@ type Experiment struct {
 }
 
 type Start struct {
-	Id          []int
-	Description Experiment
-	ExeMode     string
+	Id          []int      `json:"id"`
+	Attempts    uint       `json:"attempts"`
+	Description Experiment `json:"description"`
 }
 
 type Worker struct {

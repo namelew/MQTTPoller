@@ -300,14 +300,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 			o.client.Send(workers[i].Token+"/Command", msg)
 
-			go func(id uint64, tolerance int) {
-				<-time.After(time.Second * time.Duration(tolerance))
-				exp := o.experiments.Get(id)
-
-				if !exp.Finish {
-					o.waitGroup.Done()
-				}
-			}(uint64(expid), arg.Description.ExecTime*5)
+			go o.expTimeount(uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
@@ -382,4 +375,17 @@ func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 	o.waitGroup.Done()
 
 	return nil
+}
+
+func (o Orquestrator) expTimeount(id uint64, tolerance int, attemps uint) {
+	<-time.After(time.Second * time.Duration(tolerance))
+	exp := o.experiments.Get(id)
+
+	if !exp.Finish {
+		if attemps == 0 {
+			o.waitGroup.Done()
+		} else {
+			o.expTimeount(id, tolerance, attemps-1)
+		}
+	}
 }
