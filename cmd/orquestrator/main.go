@@ -5,12 +5,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/router"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
-	"github.com/namelew/mqtt-bm-latency/packages/network"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/network"
 )
 
 func main() {
@@ -25,12 +24,7 @@ func main() {
 	var oLog = logs.Build("orquestrator.log")
 	oLog.Create()
 
-	o := orquestrator.Build(&network.Client{
-		Broker: *broker,
-		ID:     "Orquestrator",
-		KA:     time.Second * 1000,
-		Log:    oLog,
-	}, *t_interval, *hk_interval)
+	o := orquestrator.Build(network.Create(*broker, oLog), oLog,*t_interval, *hk_interval)
 
 	err := o.Init()
 

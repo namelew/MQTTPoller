@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	paho "github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/filters"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
@@ -21,7 +21,6 @@ import (
 	"github.com/namelew/mqtt-bm-latency/packages/housekeeper"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
-	local "github.com/namelew/mqtt-bm-latency/packages/network"
 	tout "github.com/namelew/mqtt-bm-latency/packages/timeout"
 	"github.com/namelew/mqtt-bm-latency/packages/waitgroup"
 )
@@ -35,24 +34,24 @@ type Orquestrator struct {
 	log         *logs.Log
 	workers     *seworkers.Workers
 	experiments *experiments.Experiments
-	client      *local.Client
+	client      mqtt.Client
 	waitGroup   *waitgroup.WaitGroup
 	hk          *housekeeper.Housekeeper
 	response    *queue
 	tolerance   int
 }
 
-func Build(c *local.Client, t int, hki int) *Orquestrator {
+func Build(c mqtt.Client, l *logs.Log,t int, hki int) *Orquestrator {
 	return &Orquestrator{
-		log:         c.Log,
-		workers:     seworkers.Build(c.Log),
-		experiments: experiments.Build(c.Log),
+		log:         l,
+		workers:     seworkers.Build(l),
+		experiments: experiments.Build(l),
 		waitGroup:   waitgroup.New(),
 		response: &queue{
 			items: []messages.ExperimentResult{},
 			m:     &sync.Mutex{},
 		},
-		hk:        housekeeper.New(time.Hour*time.Duration(hki), c.Log),
+		hk:        housekeeper.New(time.Hour*time.Duration(hki), l),
 		client:    c,
 		tolerance: t,
 	}
@@ -69,7 +68,7 @@ func (o Orquestrator) GetWorker(id int) *models.Worker {
 func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func(t context.Context, tk, tp string, tl int)) {
 	timer, cancel := context.WithCancel(context.Background())
 
-	o.client.Register(t.OID+t.Topic, 1, true, func(c paho.Client, m paho.Message) {
+	o.client.Subscribe(t.OID+t.Topic, 1, func(c mqtt.Client, m mqtt.Message) {
 		cancel()
 		go o.timeout(t, timeHandler)
 	})
@@ -78,13 +77,11 @@ func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func(t context.Contex
 }
 
 func (o Orquestrator) Init() error {
-	o.client.Create()
-
 	o.log.Register("Starting database")
 
 	databases.Connect(o.log)
 
-	o.client.Register("Orquestrator/Register", 1, false, func(c paho.Client, m paho.Message) {
+	o.client.Subscribe("Orquestrator/Register", 1, func(c mqtt.Client, m mqtt.Message) {
 		go func(messagePayload []byte) {
 			var clientID string = ""
 			worker := string(messagePayload)
@@ -101,11 +98,11 @@ func (o Orquestrator) Init() error {
 
 			o.log.Register("worker " + worker + " registed as " + clientID)
 
-			o.client.Send("Orquestrator/Register/Log", worker+"-"+clientID)
+			o.client.Publish("Orquestrator/Register/Log", 1, false, worker+"-"+clientID)
 		}(m.Payload())
 	})
 
-	o.client.Register("Orquestrator/Login", 1, false, func(c paho.Client, m paho.Message) {
+	o.client.Subscribe("Orquestrator/Login", 1, func(c mqtt.Client, m mqtt.Message) {
 		go func(messagePayload []byte) {
 			token := string(messagePayload)
 
@@ -115,7 +112,7 @@ func (o Orquestrator) Init() error {
 
 			o.setMessageHandler(&token)
 
-			o.client.Send(token+"/Login/Log", "true")
+			(o.client.Publish(token+"/Login/Log", 1, false, "true")).Wait()
 
 			go o.timeout(&tout.Timeout{
 				OID:       token,
@@ -127,7 +124,7 @@ func (o Orquestrator) Init() error {
 				case <-t.Done():
 					return
 				case <-time.After(time.Second * time.Duration(tl)):
-					o.client.Unregister(tk + tp)
+					o.client.Unsubscribe(tk + tp)
 					o.log.Register("lost connection with worker " + tk)
 					o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
 				}
@@ -151,7 +148,7 @@ func (o Orquestrator) End() {
 }
 
 func (o *Orquestrator) setMessageHandler(t *string) {
-	o.client.Register(*t+"/Experiments/Results", 1, false, func(c paho.Client, m paho.Message) {
+	o.client.Subscribe(*t+"/Experiments/Results", 1, func(c mqtt.Client, m mqtt.Message) {
 		var output messages.ExperimentResult
 
 		err := json.Unmarshal(m.Payload(), &output)
@@ -166,7 +163,7 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 		o.waitGroup.Done()
 	})
 
-	o.client.Register(*t+"/Experiments/Status", 1, false, func(c paho.Client, m paho.Message) {
+	o.client.Subscribe(*t+"/Experiments/Status", 1, func(c mqtt.Client, m mqtt.Message) {
 		var exps messages.Status
 		json.Unmarshal(m.Payload(), &exps)
 
@@ -269,7 +266,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 				continue
 			}
 
-			o.client.Send(workers[i].Token+"/Command", msg)
+			(o.client.Publish(workers[i].Token+"/Command", 1, false, msg)).Wait()
 
 			go o.expTimeount(uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
@@ -291,7 +288,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 				o.log.Register("Worker " + workers[i].Token + " is off, skipping")
 			}
 
-			o.client.Send(workers[i].Token+"/Command", msg)
+			(o.client.Publish(workers[i].Token+"/Command", 1, false, msg)).Wait()
 
 			go func(id uint64, tolerance int) {
 				<-time.After(time.Second * time.Duration(tolerance))
@@ -336,7 +333,7 @@ func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 
 	worker := o.workers.Get(id)
 
-	o.client.Send(worker.Token+"/Command", msg)
+	(o.client.Publish(worker.Token+"/Command", 1, false, msg)).Wait()
 
 	o.waitGroup.Done()
 
