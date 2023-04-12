@@ -39,7 +39,6 @@ type Orquestrator struct {
 	waitGroup   *waitgroup.WaitGroup
 	hk          *housekeeper.Housekeeper
 	response    *queue
-	repress     *queue
 	tolerance   int
 }
 
@@ -50,10 +49,6 @@ func Build(c *local.Client, t int, hki int) *Orquestrator {
 		experiments: experiments.Build(c.Log),
 		waitGroup:   waitgroup.New(),
 		response: &queue{
-			items: []messages.ExperimentResult{},
-			m:     &sync.Mutex{},
-		},
-		repress: &queue{
 			items: []messages.ExperimentResult{},
 			m:     &sync.Mutex{},
 		},
@@ -165,18 +160,10 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 			log.Fatal(err.Error())
 		}
 
-		exp := o.experiments.Get(output.Meta.ID)
-
-		if exp.Finish {
-			o.repress.m.Lock()
-			o.repress.items = append(o.repress.items, output)
-			o.repress.m.Unlock()
-		} else {
-			o.response.m.Lock()
-			o.response.items = append(o.response.items, output)
-			o.response.m.Unlock()
-			o.waitGroup.Done()
-		}
+		o.response.m.Lock()
+		o.response.items = append(o.response.items, output)
+		o.response.m.Unlock()
+		o.waitGroup.Done()
 	})
 
 	o.client.Register(*t+"/Experiments/Status", 1, false, func(c paho.Client, m paho.Message) {
@@ -329,12 +316,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 		return o.response.items, errors.New("failed to run experiment")
 	}
 
-	o.repress.m.Lock()
-	o.response.items = append(o.response.items, o.repress.items...)
 	o.response.m.Unlock()
-
-	o.repress.items = nil
-	o.repress.m.Unlock()
 
 	go o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
 
