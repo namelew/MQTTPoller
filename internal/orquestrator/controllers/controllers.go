@@ -27,7 +27,6 @@ func (cs Controller) Get(c echo.Context) error {
 			return err
 		}
 		return c.JSON(200, resp)
-	case x[:18] == "/orquestrator/info":
 	}
 	return echo.ErrBadRequest
 }

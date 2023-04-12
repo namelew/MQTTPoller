@@ -13,7 +13,6 @@ func Route(o *orquestrator.Orquestrator, port string) {
 
 	api.GET("/orquestrator/worker", controller.List)
 	api.GET("/orquestrator/worker/:id", controller.Get)
-	api.GET("/orquestrator/info", controller.List)
 	api.POST("/orquestrator/experiment/start", controller.Procedure)
 	api.DELETE("/orquestrator/experiment/cancel/:id/:expid", controller.Procedure)
 
