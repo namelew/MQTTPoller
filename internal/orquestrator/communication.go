@@ -272,7 +272,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 			(o.client.Publish(workers[i].Token+"/Command", 1, false, msg)).Wait()
 
-			go o.expTimeount(timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
+			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
@@ -294,7 +294,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 			(o.client.Publish(workers[i].Token+"/Command", 1, false, msg)).Wait()
 
-			go o.expTimeount(timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
+			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
@@ -341,11 +341,11 @@ func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 	return nil
 }
 
-func (o Orquestrator) expTimeount(valid bool, vm *sync.Mutex, id uint64, tolerance int, attemps uint) {
+func (o Orquestrator) expTimeount(valid *bool, vm *sync.Mutex, id uint64, tolerance int, attemps uint) {
 	<-time.After(time.Second * time.Duration(tolerance))
 
 	vm.Lock()
-	if valid {
+	if *valid {
 		vm.Unlock()
 		if attemps == 0 {
 			o.waitGroup.Done()
