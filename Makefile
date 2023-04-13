@@ -12,5 +12,9 @@ build:
 	go build -o bin/worker cmd/worker/main.go
 clean:
 	rm -rf bin
+	rm -f *.bin
+	rm -f *.log
+	rm -f *.conf
+	rm -f *.db
 	docker compose down --rmi all --volumes
 	

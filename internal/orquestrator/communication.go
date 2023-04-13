@@ -149,41 +149,43 @@ func (o Orquestrator) End() {
 
 func (o *Orquestrator) setMessageHandler(t *string) {
 	o.client.Subscribe(*t+"/Experiments/Results", 1, func(c mqtt.Client, m mqtt.Message) {
-		var output messages.ExperimentResult
+		go func (payload []byte)  {
+			var output messages.ExperimentResult
 
-		err := json.Unmarshal(m.Payload(), &output)
+			err := json.Unmarshal(payload, &output)
 
-		if err != nil {
-			log.Fatal(err.Error())
-		}
+			if err != nil {
+				log.Fatal(err.Error())
+			}
 
-		o.response.m.Lock()
-		o.response.items = append(o.response.items, output)
-		o.response.m.Unlock()
-		o.waitGroup.Done()
+			o.response.m.Lock()
+			o.response.items = append(o.response.items, output)
+			o.response.m.Unlock()
+			o.waitGroup.Done()
+		}(m.Payload())
 	})
 
 	o.client.Subscribe(*t+"/Experiments/Status", 1, func(c mqtt.Client, m mqtt.Message) {
-		var exps messages.Status
-		json.Unmarshal(m.Payload(), &exps)
+		func (payload []byte) {
+			var exps messages.Status
+			json.Unmarshal(payload, &exps)
 
-		tokens := strings.Split(exps.Type, " ")
-		expid, _ := strconv.Atoi(tokens[2])
+			tokens := strings.Split(exps.Type, " ")
+			expid, _ := strconv.Atoi(tokens[2])
 
-		exp := o.experiments.Get(uint64(expid))
+			exp := o.experiments.Get(uint64(expid))
 
-		switch exps.Status {
-		case "start":
-			return
-		case "finish":
-			return
-		default:
-			o.waitGroup.Done()
-			if exp.ID != 0 {
-				go o.experiments.Update(uint64(expid), models.Experiment{Finish: true, Error: exps.Status})
-				//redoExperiment(id, exp)
+			switch exps.Status {
+			case "start":
+				return
+			case "finish":
+				return
+			default:
+				if exp.ID != 0 {
+					o.waitGroup.Done()
+				}
 			}
-		}
+		}(m.Payload())
 	})
 }
 
