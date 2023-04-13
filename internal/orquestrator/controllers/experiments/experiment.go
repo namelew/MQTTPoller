@@ -52,3 +52,42 @@ func (e Experiments) CancelExperiment(c echo.Context) error {
 
 	return nil
 }
+
+func (w Experiments) Get(c echo.Context) (messages.Worker, error) {
+	expid, err := strconv.Atoi(c.Param("id"))
+
+	if err != nil {
+		return messages.Worker{}, echo.ErrBadRequest
+	}
+
+	worker := w.Orquestrator.GetWorker(expid)
+
+	response := messages.Worker{Id: int(worker.ID), NetId: worker.Token, Online: worker.Online}
+
+	return response, nil
+}
+
+func (w Experiments) List(c echo.Context) ([]messages.Worker, error) {
+	workers := w.Orquestrator.ListWorkers(nil)
+	response := make([]messages.Worker, 0)
+
+	for i := range workers {
+		response = append(response, messages.Worker{Id: int(workers[i].ID), NetId: workers[i].Token, Online: workers[i].Online})
+	}
+
+	return response, nil
+}
+
+func (w Experiments) Delete(c echo.Context) (messages.Worker, error) {
+	expid, err := strconv.Atoi(c.Param("id"))
+
+	if err != nil {
+		return messages.Worker{}, echo.ErrBadRequest
+	}
+
+	worker := w.Orquestrator.GetWorker(expid)
+
+	response := messages.Worker{Id: int(worker.ID), NetId: worker.Token, Online: worker.Online}
+
+	return response, nil
+}

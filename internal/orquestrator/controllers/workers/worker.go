@@ -21,7 +21,7 @@ func (w Workers) Get(c echo.Context) (messages.Worker, error) {
 
 	worker := w.Orquestrator.GetWorker(wid)
 
-	response := messages.Worker{Id: int(worker.ID), NetId: worker.Token, Online: worker.Online, History: nil}
+	response := messages.Worker{Id: int(worker.ID), NetId: worker.Token, Online: worker.Online}
 
 	return response, nil
 }
@@ -31,7 +31,7 @@ func (w Workers) List(c echo.Context) ([]messages.Worker, error) {
 	response := make([]messages.Worker, 0)
 
 	for i := range workers {
-		response = append(response, messages.Worker{Id: int(workers[i].ID), NetId: workers[i].Token, Online: workers[i].Online, History: nil})
+		response = append(response, messages.Worker{Id: int(workers[i].ID), NetId: workers[i].Token, Online: workers[i].Online})
 	}
 
 	return response, nil

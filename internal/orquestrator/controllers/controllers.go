@@ -27,6 +27,8 @@ func (cs Controller) Get(c echo.Context) error {
 			return err
 		}
 		return c.JSON(200, resp)
+	case x[:24] == "/orquestrator/experiment":
+		return c.JSON(200, nil)
 	}
 	return echo.ErrBadRequest
 }
@@ -39,6 +41,16 @@ func (cs Controller) List(c echo.Context) error {
 			return err
 		}
 		return c.JSON(200, resp)
+	case "/orquestrator/experiment":
+		return c.JSON(200, nil)
+	}
+	return echo.ErrBadRequest
+}
+
+func (cs Controller) Delete(c echo.Context) error {
+	switch x := c.Request().URL.Path; {
+		case x[:24] == "/orquestrator/experiment":
+			return c.JSON(200, nil)
 	}
 	return echo.ErrBadRequest
 }

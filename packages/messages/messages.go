@@ -61,7 +61,6 @@ type Worker struct {
 	Id      int
 	NetId   string
 	Online  bool
-	History []interface{}
 }
 
 type SubscriberExperimentResult struct {
