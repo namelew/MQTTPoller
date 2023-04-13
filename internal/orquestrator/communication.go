@@ -199,6 +199,8 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	var cmd messages.Command
 	var experiment messages.CommandExperiment
 	var nwkrs int = 0
+	var timeoutIsValid = true
+	var validMutex sync.Mutex = sync.Mutex{}
 
 	cmd.Name = "start"
 	cmd.CommandType = "experiment command"
@@ -270,7 +272,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 			(o.client.Publish(workers[i].Token+"/Command", 1, false, msg)).Wait()
 
-			go o.expTimeount(uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
+			go o.expTimeount(timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
@@ -292,20 +294,17 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 			(o.client.Publish(workers[i].Token+"/Command", 1, false, msg)).Wait()
 
-			go func(id uint64, tolerance int) {
-				<-time.After(time.Second * time.Duration(tolerance))
-				exp := o.experiments.Get(id)
-
-				if !exp.Finish {
-					o.waitGroup.Done()
-				}
-			}(uint64(expid), arg.Description.ExecTime*5)
+			go o.expTimeount(timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].Token)
 		}
 	}
 
 	o.waitGroup.Wait()
+
+	validMutex.Lock()
+	timeoutIsValid = false
+	validMutex.Unlock()
 
 	o.response.m.Lock()
 
@@ -342,15 +341,16 @@ func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 	return nil
 }
 
-func (o Orquestrator) expTimeount(id uint64, tolerance int, attemps uint) {
+func (o Orquestrator) expTimeount(valid bool, vm *sync.Mutex, id uint64, tolerance int, attemps uint) {
 	<-time.After(time.Second * time.Duration(tolerance))
-	exp := o.experiments.Get(id)
 
-	if !exp.Finish {
+	vm.Lock()
+	if valid {
+		vm.Unlock()
 		if attemps == 0 {
 			o.waitGroup.Done()
 		} else {
-			o.expTimeount(id, tolerance, attemps-1)
+			o.expTimeount(valid, vm, id, tolerance, attemps-1)
 		}
 	}
 }
