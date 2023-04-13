@@ -58,7 +58,6 @@ services:
       - BROKER=tcp://mosquitto_broker:1883
       - LTIMEOUT=30
       - LTHRESHOUT=3
-      - TOOL=source/tools/mqttloader/bin/mqttloader
     depends_on:
       - orquestrator
   workers-2:
@@ -81,9 +80,8 @@ services:
       - BROKER=tcp://mosquitto_broker:1883
       - LTIMEOUT=30
       - LTHRESHOUT=3
-      - TOOL=source/tools/mqttloader/bin/mqttloader
     depends_on:
-      - orquestrator
+      - workers
   workers-3:
     container_name: worker-3
     build:
@@ -104,9 +102,8 @@ services:
       - BROKER=tcp://mosquitto_broker:1883
       - LTIMEOUT=30
       - LTHRESHOUT=3
-      - TOOL=source/tools/mqttloader/bin/mqttloader
     depends_on:
-      - orquestrator
+      - workers-2
 networks:
   example_experiment_network:
     driver: bridge
