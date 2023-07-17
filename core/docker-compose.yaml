@@ -1,0 +1,111 @@
+version: '3.9'
+services:
+  broker:
+    container_name: mosquitto_broker
+    image: eclipse-mosquitto:latest
+    volumes:
+     - ./mosquitto.confg:/mosquitto/config/mosquitto.conf
+     - mosquitto_data:/mosquitto
+    networks:
+     - example_experiment_network
+  target:
+    container_name: test_broker
+    image: eclipse-mosquitto:latest
+    volumes:
+     - ./mosquitto.confg:/mosquitto/config/mosquitto.conf
+    networks:
+     - example_experiment_network
+  orquestrator:
+    container_name: orquestrator
+    build:
+      context: ./
+      dockerfile: ./images/orquestrator/prod/Dockerfile
+    image: mqttdb/orquestrator:latest
+    deploy:
+      resources:
+        limits:
+          #cpus: '0.40'
+          memory: 30M
+        reservations:
+          #cpus: '0.30'
+          memory: 10M
+    ports:
+      - 8000:8000
+    networks:
+     - example_experiment_network
+    environment:
+      - TOLERANCE=5
+      - BROKER=tcp://mosquitto_broker:1883
+    depends_on:
+      - broker
+  workers:
+    container_name: worker
+    build:
+      context: ./
+      dockerfile: ./images/worker/prod/Dockerfile
+    image: mqttdb/worker:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 30M
+        reservations:
+          cpus: '0.20'
+          memory: 10M
+    networks:
+     - example_experiment_network
+    environment:
+      - BROKER=tcp://mosquitto_broker:1883
+      - LTIMEOUT=30
+      - LTHRESHOUT=3
+    depends_on:
+      - orquestrator
+  workers-2:
+    container_name: worker-2
+    build:
+      context: ./
+      dockerfile: ./images/worker/prod/Dockerfile
+    image: mqttdb/worker:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 30M
+        reservations:
+          cpus: '0.20'
+          memory: 10M
+    networks:
+     - example_experiment_network
+    environment:
+      - BROKER=tcp://mosquitto_broker:1883
+      - LTIMEOUT=30
+      - LTHRESHOUT=3
+    depends_on:
+      - workers
+  workers-3:
+    container_name: worker-3
+    build:
+      context: ./
+      dockerfile: ./images/worker/prod/Dockerfile
+    image: mqttdb/worker:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 30M
+        reservations:
+          cpus: '0.20'
+          memory: 10M
+    networks:
+     - example_experiment_network
+    environment:
+      - BROKER=tcp://mosquitto_broker:1883
+      - LTIMEOUT=30
+      - LTHRESHOUT=3
+    depends_on:
+      - workers-2
+networks:
+  example_experiment_network:
+    driver: bridge
+volumes:
+  mosquitto_data:

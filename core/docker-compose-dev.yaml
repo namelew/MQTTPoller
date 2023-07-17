@@ -1,0 +1,56 @@
+version: '3.9'
+services:
+  broker:
+    container_name: mosquitto_broker
+    image: eclipse-mosquitto:latest
+    volumes:
+     - ./mosquitto.confg:/mosquitto/config/mosquitto.conf
+     - mosquitto_data:/mosquitto
+    networks:
+     - example_experiment_network
+  orquestrator:
+    container_name: orquestrator
+    build:
+      context: ./
+      dockerfile: ./images/orquestrator/dev/Dockerfile
+    image: mqttdb/orquestrator:development
+    ports:
+      - 8000:8000
+    networks:
+     - example_experiment_network
+    environment:
+      - TOLERANCE=5
+      - BROKER=tcp://mosquitto_broker:1883
+    volumes:
+      - ./:/app
+    depends_on:
+      - broker
+  workers:
+    container_name: worker
+    build:
+      context: ./
+      dockerfile: ./images/worker/dev/Dockerfile
+    image: mqttdb/worker:development
+    networks:
+     - example_experiment_network
+    environment:
+      - BROKER=tcp://mosquitto_broker:1883
+      - LTIMEOUT=30
+      - LTHRESHOUT=-1
+      - TOOL=source/tools/mqttloader/bin/mqttloader
+    volumes:
+      - ./:/app
+    depends_on:
+      - orquestrator
+  target:
+    container_name: test_broker
+    image: eclipse-mosquitto:latest
+    volumes:
+     - ./mosquitto.confg:/mosquitto/config/mosquitto.conf
+    networks:
+     - example_experiment_network
+networks:
+  example_experiment_network:
+    driver: bridge
+volumes:
+  mosquitto_data:
