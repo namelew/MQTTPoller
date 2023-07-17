@@ -1,0 +1,15 @@
+*./go.mod
+*.csv
+*.config
+tools
+.vscode
+bin
+examples
+dump
+*.db-journal
+*.db
+*.config
+*.conf
+*.bin
+*.log
+tmp/
