@@ -19,7 +19,7 @@ func Build(l *logs.Log) *Workers {
 	}
 }
 
-func (h *Workers) Add(w models.Worker) {
+func (h *Workers) Add(w models.Worker) error{
 	cerr := make(chan error, 1)
 
 	go func(worker *models.Worker) {
@@ -29,11 +29,13 @@ func (h *Workers) Add(w models.Worker) {
 	err := <-cerr
 
 	if err != nil {
-		h.log.Fatal("Unable to add worker in database")
+		h.log.Register("Unable to add worker in database")
 	}
+
+	return err
 }
 
-func (h *Workers) Remove(id uint) {
+func (h *Workers) Remove(id uint) error{
 	cerr := make(chan error, 1)
 
 	go func() {
@@ -43,11 +45,13 @@ func (h *Workers) Remove(id uint) {
 	err := <-cerr
 
 	if err != nil {
-		h.log.Fatal("Unable to remove worker data")
+		h.log.Register("Unable to remove worker data")
 	}
+
+	return err
 }
 
-func (h *Workers) Update(id uint, new models.Worker) {
+func (h *Workers) Update(id uint, new models.Worker) error{
 	cerr := make(chan error, 1)
 
 	go func() {
@@ -63,53 +67,62 @@ func (h *Workers) Update(id uint, new models.Worker) {
 	err := <-cerr
 
 	if err != nil {
-		h.log.Fatal("Unable to update worker data")
+		h.log.Register("Unable to update worker data")
 	}
+
+	return err
 }
 
 func (h *Workers) ChangeStatus(new *filters.Worker) {
 	var worker models.Worker
 
 	if (databases.DB.Model(&models.Worker{}).Where("token = ?", new.Token).Find(&worker)).Error != nil || worker.ID == 0 {
-		h.log.Fatal("Update error, unable to find worker")
+		h.log.Register("Update error, unable to find worker")
 	}
 
 	if worker.Online != new.Online {
 		if (databases.DB.Model(&models.Worker{}).Where("id = ?", worker.ID).Update("online", new.Online)).Error != nil {
-			h.log.Fatal("Unable to update worker status")
+			h.log.Register("Unable to update worker status")
 		}
 	}
 }
 
-func (h *Workers) List(filter *filters.Worker) []models.Worker {
+func (h *Workers) List(filter *filters.Worker) ([]models.Worker, error) {
 	var workers []models.Worker
 
 	if filter != nil {
-		if err := (databases.DB.Where(&models.Worker{
+		err := (databases.DB.Where(&models.Worker{
 			ID:     filter.WorkerID,
 			Token:  filter.Token,
 			Online: filter.Online,
 			Error:  filter.Error,
-		}).Find(&workers)).Error; err != nil {
-			h.log.Fatal("Unable to find matched workers")
+		}).Find(&workers)).Error;
+
+		if err != nil {
+			h.log.Register("Unable to find matched workers")
+			return workers, err
 		}
 	} else {
 		if err := (databases.DB.Find(&workers)).Error; err != nil {
-			h.log.Fatal("Unable to get workers registers on database")
+			h.log.Register("Unable to get workers registers on database")
+			return workers, err
 		}
 	}
 
-	return workers
+	return workers, nil
 }
 
-func (h *Workers) Get(id int) *models.Worker {
+func (h *Workers) Get(id int) (*models.Worker, error) {
 	var worker models.Worker
 
-	if err := (databases.DB.Model(&models.Worker{}).Where("id = ?", id).Find(&worker)).Error; err != nil {
-		h.log.Fatal("Unable to find worker")
+	err := (databases.DB.Model(&models.Worker{}).Where("id = ?", id).Find(&worker)).Error
+	
+	if err != nil {
+		h.log.Register("Unable to find worker")
+		return nil, err
 	}
 
-	return &worker
+	return &worker, nil
 }
 
 func (h *Workers) TrashOut(i time.Time) {

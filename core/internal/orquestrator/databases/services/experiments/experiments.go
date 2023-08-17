@@ -20,27 +20,31 @@ func Build(l *logs.Log) *Experiments {
 	}
 }
 
-func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, wid ...int) {
+func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, wid ...int) error {
 	var wkrs []models.Worker
 	var declaration, empty models.ExperimentDeclaration
 
 	if len(wid) <= 1 || wid[0] == -1 {
-		if (databases.DB.Find(&wkrs)).Error != nil {
-			h.log.Fatal("Unable to find workers")
+		if err := (databases.DB.Find(&wkrs)).Error; err != nil {
+			h.log.Register("Unable to find workers")
+			return err
 		}
 	} else {
-		if (databases.DB.Where("id IN ?", wid).Find(&wkrs)).Error != nil {
-			h.log.Fatal("Unable to find workers")
+		if err := (databases.DB.Where("id IN ?", wid).Find(&wkrs)).Error; err != nil {
+			h.log.Register("Unable to find workers")
+			return err
 		}
 	}
 
-	if (databases.DB.Model(&d).Find(&declaration)).Error != nil {
-		h.log.Fatal("Unable to query experiment declaration")
+	if err := (databases.DB.Model(&d).Find(&declaration)).Error; err != nil {
+		h.log.Register("Unable to query experiment declaration")
+		return err
 	}
 
 	if declaration == empty {
-		if (databases.DB.Create(&d)).Error != nil {
-			h.log.Fatal("Unable to create experiment declaration")
+		if err := (databases.DB.Create(&d)).Error; err != nil {
+			h.log.Register("Unable to create experiment declaration")
+			return err
 		}
 	}
 
@@ -51,47 +55,59 @@ func (h *Experiments) Add(e models.Experiment, d models.ExperimentDeclaration, w
 	e.ExperimentDeclarationID = declaration.ID
 	e.ExperimentDeclaration = declaration
 
-	if (databases.DB.Create(&e)).Error != nil {
-		h.log.Fatal("Unable to register experiment")
+	if err := (databases.DB.Create(&e)).Error; err != nil {
+		h.log.Register("Unable to register experiment")
+		return err
 	}
+
+	return nil
 }
 
-func (h *Experiments) Remove(id uint64) {
-	if (databases.DB.Model(&models.Experiment{}).Where("id = ?", id).Delete(&models.Experiment{})).Error != nil {
+func (h *Experiments) Remove(id uint64) error {
+	if err := (databases.DB.Model(&models.Experiment{}).Where("id = ?", id).Delete(&models.Experiment{})).Error; err != nil {
 		h.log.Fatal("Unable to remove experiment")
+		return err
 	}
+
+	return nil
 }
 
-func (h *Experiments) Update(key uint64, new models.Experiment) {
+func (h *Experiments) Update(key uint64, new models.Experiment) error {
 	var experiment models.Experiment
 
 	if err := (databases.DB.Model(&models.Experiment{}).Where("id = ?", key).Find(&experiment)).Error; err != nil || experiment.ID == 0 {
-		h.log.Fatal("Unable to find selected experiment")
+		h.log.Register("Unable to find selected experiment")
+		return err
 	}
 
-	if (databases.DB.Save(&experiment)).Error != nil {
-		h.log.Fatal("Unable to update experiment")
+	if err := (databases.DB.Save(&experiment)).Error; err != nil {
+		h.log.Register("Unable to update experiment")
+		return err
 	}
+
+	return nil
 }
 
-func (h *Experiments) List() []models.Experiment {
+func (h *Experiments) List() ([]models.Experiment, error) {
 	var experiments []models.Experiment
 
 	if err := (databases.DB.Find(&experiments)).Error; err != nil {
-		h.log.Fatal("Unable to get experiments registers on database")
+		h.log.Register("Unable to get experiments registers on database")
+		return experiments, err
 	}
 
-	return experiments
+	return experiments, nil
 }
 
-func (h *Experiments) Get(id uint64) models.Experiment {
+func (h *Experiments) Get(id uint64) (models.Experiment, error) {
 	var experiment models.Experiment
 
 	if err := (databases.DB.Where("id = ?", id).Find(&experiment)).Error; err != nil {
-		h.log.Fatal("Unable to get experiment register on database")
+		h.log.Register("Unable to get experiment register on database")
+		return experiment, err
 	}
 
-	return experiment
+	return experiment, nil
 }
 
 func (h *Experiments) TrashOut(i time.Time) {

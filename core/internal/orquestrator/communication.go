@@ -58,11 +58,13 @@ func Build(c mqtt.Client, l *logs.Log,t int, hki int) *Orquestrator {
 }
 
 func (o Orquestrator) ListWorkers(filter *filters.Worker) []models.Worker {
-	return o.workers.List(filter)
+	workers, _ := o.workers.List(filter)
+	return workers
 }
 
 func (o Orquestrator) GetWorker(id int) *models.Worker {
-	return o.workers.Get(id)
+	worker, _ := o.workers.Get(id)
+	return worker
 }
 
 func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func(t context.Context, tk, tp string, tl int)) {
@@ -173,7 +175,11 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 			tokens := strings.Split(exps.Type, " ")
 			expid, _ := strconv.Atoi(tokens[2])
 
-			exp := o.experiments.Get(uint64(expid))
+			exp,err := o.experiments.Get(uint64(expid))
+
+			if err != nil {
+				return
+			}
 
 			switch exps.Status {
 			case "start":
@@ -258,7 +264,12 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	)
 
 	if arg.Id[0] == -1 {
-		workers := o.workers.List(nil)
+		workers, err := o.workers.List(nil)
+
+		if err != nil {
+			o.log.Register("Fail in experiment request. No workers")
+			return nil, err
+		}
 
 		nwkrs = len(workers)
 
@@ -280,10 +291,21 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 		workers := make([]*models.Worker, 10)
 
 		for _, i := range arg.Id {
-			workers = append(workers, o.workers.Get(i))
+			worker,err := o.workers.Get(i)
+
+			if err != nil {
+				o.log.Register(fmt.Sprintf("Unable to request experiment to worker %d", i))
+				continue
+			}
+
+			workers = append(workers, worker)
 		}
 
 		nwkrs = len(workers)
+
+		if nwkrs == 0 {
+			return nil, errors.New("Unable to select desired workers")
+		}
 
 		o.waitGroup.Add(nwkrs)
 
@@ -329,10 +351,16 @@ func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 	msg, err := json.Marshal(cmd)
 
 	if err != nil {
+		o.log.Register("Unable to build cancel message")
 		return err
 	}
 
-	worker := o.workers.Get(id)
+	worker, err := o.workers.Get(id)
+
+	if err != nil {
+		o.log.Register("Unable to find desired worker")
+		return err
+	}
 
 	(o.client.Publish(worker.Token+"/Command", 1, false, msg)).Wait()
 

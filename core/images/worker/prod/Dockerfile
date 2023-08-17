@@ -1,10 +1,11 @@
 FROM golang:1.18-alpine as base
 
 WORKDIR /app
-COPY . /app/
+COPY . .
 
-RUN apk update
+RUN apk update; apk add --no-cache git
 RUN go build -o bin/worker cmd/worker/main.go
+RUN git clone https://github.com/namelew/mqttloader.git ./tools/mqttloader
 
 FROM alpine:3.17 as binary
 
