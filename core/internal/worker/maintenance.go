@@ -240,18 +240,8 @@ func authentication(w *Worker, threshold int) {
 	log.Register("Auth sucess")
 }
 
-func createClient(w *Worker) mqtt.Client{
+func createClient(w *Worker, opts *mqtt.ClientOptions) mqtt.Client{
 	log.Register("Configuring mqtt paho client")
-	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
-
-	opts := mqtt.NewClientOptions().
-		AddBroker(w.broker).
-		SetClientID(w.Id).
-		SetCleanSession(true).
-		SetAutoReconnect(true).
-		SetKeepAlive(ka).
-		SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {}).
-		SetConnectionLostHandler(func(client mqtt.Client, reason error) {})
 
 	c := mqtt.NewClient(opts)
 
@@ -332,14 +322,27 @@ func connect(w *Worker){
 	log.Register("Check if token exists")
 
 	wtoken, makeRegister := getToken()
+	
+	w.Id = wtoken
+	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
+	opts := mqtt.NewClientOptions().
+		AddBroker(w.broker).
+		SetClientID(w.Id).
+		SetCleanSession(true).
+		SetAutoReconnect(true).
+		SetKeepAlive(ka).
+		SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {}).
+		SetConnectionLostHandler(func(client mqtt.Client, reason error) {})
 
 	if makeRegister {
-		w.Id = wtoken
-		w.client = createClient(w)
+		w.client = createClient(w, opts)
 		register(w, w.loginThreshold)	
 	}
 
-	w.client = createClient(w)
+	opts.SetCleanSession(false)
+
+	w.client = createClient(w, opts)
+
 	log.Register("Authentication worker")
 	authentication(w, w.loginThreshold)
 }
