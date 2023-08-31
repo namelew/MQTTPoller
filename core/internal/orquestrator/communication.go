@@ -150,7 +150,7 @@ func (o Orquestrator) End() {
 }
 
 func (o *Orquestrator) setMessageHandler(t *string) {
-	o.client.Subscribe(*t+"/Experiments/Results", 1, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Subscribe(*t+"/Experiments/Results", 2, func(c mqtt.Client, m mqtt.Message) {
 		go func (payload []byte)  {
 			var output messages.ExperimentResult
 
@@ -167,7 +167,7 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 		}(m.Payload())
 	})
 
-	o.client.Subscribe(*t+"/Experiments/Status", 1, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Subscribe(*t+"/Experiments/Status", 2, func(c mqtt.Client, m mqtt.Message) {
 		func (payload []byte) {
 			var exps messages.Status
 			json.Unmarshal(payload, &exps)
