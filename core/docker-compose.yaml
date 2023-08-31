@@ -34,7 +34,7 @@ services:
     networks:
      - example_experiment_network
     environment:
-      - TOLERANCE=5
+      - TOLERANCE=10
       - BROKER=tcp://mosquitto_broker:1883
     depends_on:
       - broker
