@@ -157,7 +157,8 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 			err := json.Unmarshal(payload, &output)
 
 			if err != nil {
-				log.Fatal(err.Error())
+				log.Println(err.Error())
+				return
 			}
 
 			o.response.m.Lock()
