@@ -3,9 +3,9 @@ FROM golang:1.18-alpine as base
 WORKDIR /app
 COPY . .
 
-RUN apk update; apk add --no-cache git
+RUN apk update; apk add --no-cache curl unzip
 RUN go build -o bin/worker cmd/worker/main.go
-RUN git clone https://github.com/namelew/mqttloader.git ./tools/mqttloader
+RUN mkdir tools; curl -OL https://github.com/dist-sys/mqttloader/releases/download/v0.8.6/mqttloader-0.8.6.zip; unzip ./mqttloader-0.8.6.zip -d /app/tools
 
 FROM alpine:3.17 as binary
 
