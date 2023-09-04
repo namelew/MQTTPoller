@@ -1,20 +1,18 @@
-# MQTTDistributedBench - broker latency measure tool
-Ferramenta feita para gerar testes distribuidos de latência, vazão e perda em redes baseadas no protocolo MQTT. Para isso, é utilizado um nodo principal, chamado orquestrador, para gerenciar nodos trabalhadores, denomidados workers, reponsáveis por executar os experimentos de forma concorrente através de uma ferramenta que pode ser escolhida pelo usuário.
-
-Para a comunicação entre orquestrador e workers, é utilizado o protocolo MQTT. Deve existir um Broker de comunicação conhecido entre ambas as partes para que a aplicação funcione corretamente. O orquestrador deve ser iniciado antes dos workers, pois os workers são incapazes de esperar até ele estar disponível.
+# MQTTPoller - Application Core
+O core da aplicação é são os processos principais do MQTT Poller, aqui estão os códigos do Orquestrador e dos trabalhadores e um exemplo de uso. O core utiliza o MQTT para a comunicação entre trabalhadores e orquestrador. Sua saída padrão é via API Rest no formato JSON, que é consumido pelo Frontend. Abaixo, segue as prinicipais dependências, e as rotas de controle do orquestrador.
 ## Dependências
 * Golang
-* Git
+* Docker (Para o exemplo)
 * Make
 ## Instalação
  ```
-git clone https://github.com/namelew/MQTTDistributedBench MQTTDB
-cd MQTTDB
+git clone https://github.com/namelew/MQTTDistributedBench MQTTPoller
+cd MQTTPoller/core
 make
  ```
 ## Example - Docker
 ```
-make docker
+make example
 ```
 ## Orquestrador
 ### Utilização
@@ -81,7 +79,7 @@ or
 * request
 ```
 {
-    "id": [ids],
+    "id": [string],
     "description":{
         "tool":	tool string name,
         "broker":	broker ip/dns,
@@ -112,7 +110,6 @@ or
         "tlsKeystore": string file path,
         "tlsKeystorePass": string key file path
     },
-    "exeMode":unused attribute
 }
 ```
 * response
@@ -144,6 +141,6 @@ Para iniciar o worker execute o binário worker que será gerado no diretório b
 |:-----|:--------------|:------------|
 | timeout | 5 | Number of time, in minutes, that the client will remain running after trigger|
 | login_t | 30 | Time that client will wait Orquestrator login confirmation, in seconds|
+| login_th | -1 | Login attemps before auth fail shutdown (-1 equals to one attemp) |
 | broker | `tcp://localhost:1883` | Communication broker to worker - orquestrator relation|
-| isunix | true | flag that confirm if the client is running on a unixlike machine|
 | tool | `source/tools/mqttloader/bin/mqttloader` | localization of the mqtt benckmark tool to the client experiment|

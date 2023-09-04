@@ -10,6 +10,7 @@ build:
 clean:
 	rm -rf bin
 	rm -f *.bin
+	rm -f *.data
 	rm -f *.log
 	rm -f *.conf
 	rm -f *.db
