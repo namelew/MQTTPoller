@@ -23,12 +23,12 @@ import (
 )
 
 type Worker struct {
-	Id     string
-	tool   string
-	broker string
-	loginTimeout time.Duration
+	Id             string
+	tool           string
+	broker         string
+	loginTimeout   time.Duration
 	loginThreshold int
-	client mqtt.Client
+	client         mqtt.Client
 }
 
 var log *logs.Log = logs.Build("worker.log")
@@ -213,14 +213,14 @@ func authentication(w *Worker, threshold int) {
 	token = w.client.Publish("Orquestrator/Login", byte(1), false, w.Id)
 	token.Wait()
 
-	go func ()  {
+	go func() {
 		<-time.After(w.loginTimeout)
-		confirmation <- false	
+		confirmation <- false
 	}()
 
 	if !<-confirmation {
 		if threshold > 1 {
-			authentication(w, threshold - 1)
+			authentication(w, threshold-1)
 			return
 		}
 
@@ -228,7 +228,7 @@ func authentication(w *Worker, threshold int) {
 			authentication(w, threshold)
 			return
 		}
-		
+
 		mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline auth fail", Attr: messages.Command{}})
 		token := w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
 		token.Wait()
@@ -240,7 +240,7 @@ func authentication(w *Worker, threshold int) {
 	log.Register("Auth sucess")
 }
 
-func createClient(w *Worker, opts *mqtt.ClientOptions) mqtt.Client{
+func createClient(w *Worker, opts *mqtt.ClientOptions) mqtt.Client {
 	log.Register("Configuring mqtt paho client")
 
 	c := mqtt.NewClient(opts)
@@ -258,15 +258,9 @@ func register(w *Worker, threshold int) {
 	confirmation := make(chan bool, 1)
 
 	token := w.client.Subscribe("Orquestrator/Register/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		response := strings.Split(string(m.Payload()), "-")
+		response := strings.Split(string(m.Payload()), " ")
 
 		if response[0] != w.Id {
-			mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline registration fail", Attr: messages.Command{}})
-			token := w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
-			token.Wait()
-			w.client.Disconnect(0)
-			log.Register("Shutdown register failure")
-			os.Exit(0)
 			return
 		}
 
@@ -289,14 +283,14 @@ func register(w *Worker, threshold int) {
 	token = w.client.Publish("Orquestrator/Register", byte(1), false, w.Id)
 	token.Wait()
 
-	go func ()  {
+	go func() {
 		<-time.After(w.loginTimeout)
-		confirmation <- false	
+		confirmation <- false
 	}()
 
 	if !<-confirmation {
 		if threshold > 1 {
-			register(w, threshold - 1)
+			register(w, threshold-1)
 			return
 		}
 
@@ -304,7 +298,7 @@ func register(w *Worker, threshold int) {
 			register(w, threshold)
 			return
 		}
-		
+
 		mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline auth fail", Attr: messages.Command{}})
 		token := w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
 		token.Wait()
@@ -318,11 +312,11 @@ func register(w *Worker, threshold int) {
 	w.client.Disconnect(0)
 }
 
-func connect(w *Worker){
+func connect(w *Worker) {
 	log.Register("Check if token exists")
 
 	wtoken, makeRegister := getToken()
-	
+
 	w.Id = wtoken
 	ka, _ := time.ParseDuration(strconv.Itoa(10000) + "s")
 	opts := mqtt.NewClientOptions().
@@ -336,7 +330,7 @@ func connect(w *Worker){
 
 	if makeRegister {
 		w.client = createClient(w, opts)
-		register(w, w.loginThreshold)	
+		register(w, w.loginThreshold)
 	}
 
 	opts.SetCleanSession(false)
@@ -362,13 +356,13 @@ func Init(broker string, tool string, loginTimeout, loginThreshold int) {
 
 	log.Register("Preparing authentication token")
 
-	worker := Worker {
-		broker: broker,
-		tool: tool,
-		loginTimeout: time.Duration(loginTimeout) * time.Second,
+	worker := Worker{
+		broker:         broker,
+		tool:           tool,
+		loginTimeout:   time.Duration(loginTimeout) * time.Second,
 		loginThreshold: loginThreshold,
 	}
-	
+
 	connect(&worker)
 
 	log.Register("Warning orquestrator that worker is online")

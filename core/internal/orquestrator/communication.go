@@ -74,7 +74,7 @@ func (o Orquestrator) Init() error {
 
 	o.client.Subscribe("Orquestrator/Register", 1, func(c mqtt.Client, m mqtt.Message) {
 		go func(messagePayload []byte) {
-			var clientID string = uuid.New().String()[:8]
+			var clientID string = uuid.New().String()[:]
 			worker := string(messagePayload)
 
 			data.WorkersTable.Add(clientID, models.Worker{ID: clientID, KeepAliveDeadline: 1, Online: false})
@@ -83,7 +83,7 @@ func (o Orquestrator) Init() error {
 
 			o.log.Register("worker " + worker + " registed as " + clientID)
 
-			o.client.Publish("Orquestrator/Register/Log", 1, false, worker+"-"+clientID)
+			o.client.Publish("Orquestrator/Register/Log", 1, false, worker+" "+clientID)
 		}(m.Payload())
 	})
 
