@@ -330,6 +330,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	}
 
 	experiment.Finish = true
+	experiment.Results = o.response.items
 
 	if len(o.response.items) < nwkrs {
 		o.response.m.Unlock()

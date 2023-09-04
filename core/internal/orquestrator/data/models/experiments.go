@@ -1,5 +1,7 @@
 package models
 
+import "github.com/namelew/mqtt-bm-latency/packages/messages"
+
 type Experiment struct {
 	ID                    uint64
 	Broker                string `json:"broker"`
@@ -30,5 +32,6 @@ type Experiment struct {
 	TlsKeystorePassword   string `json:"tlsKeystorePass"`
 	Finish                bool
 	Error                 string
+	Results               []messages.ExperimentResult
 	WorkerIDs             []string
 }
