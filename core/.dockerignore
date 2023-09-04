@@ -4,6 +4,6 @@ images/
 .gitignore
 mosquitto.confg
 *.log
-*.db
+*.data
 *.md
 token.bin
