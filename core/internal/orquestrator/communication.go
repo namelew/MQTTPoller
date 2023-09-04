@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/google/uuid"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data/models"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
@@ -74,14 +74,8 @@ func (o Orquestrator) Init() error {
 
 	o.client.Subscribe("Orquestrator/Register", 1, func(c mqtt.Client, m mqtt.Message) {
 		go func(messagePayload []byte) {
-			var clientID string = ""
+			var clientID string = uuid.New().String()[:8]
 			worker := string(messagePayload)
-
-			for i := 0; i < 10; i++ {
-				seed := rand.NewSource(time.Now().UnixNano())
-				random := rand.New(seed)
-				clientID += fmt.Sprintf("%d", random.Int()%10)
-			}
 
 			data.WorkersTable.Add(clientID, models.Worker{ID: clientID, KeepAliveDeadline: 1, Online: false})
 
