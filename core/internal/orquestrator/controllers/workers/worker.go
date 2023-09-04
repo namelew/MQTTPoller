@@ -1,8 +1,6 @@
 package workers
 
 import (
-	"strconv"
-
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
@@ -13,25 +11,19 @@ type Workers struct {
 }
 
 func (w Workers) Get(c echo.Context) (messages.Worker, error) {
-	wid, err := strconv.Atoi(c.Param("id"))
+	worker := w.Orquestrator.GetWorker(c.Param("id"))
 
-	if err != nil {
-		return messages.Worker{}, echo.ErrBadRequest
-	}
-
-	worker := w.Orquestrator.GetWorker(wid)
-
-	response := messages.Worker{Id: int(worker.ID), NetId: worker.Token, Online: worker.Online}
+	response := messages.Worker{Id: worker.ID, Online: worker.Online}
 
 	return response, nil
 }
 
 func (w Workers) List(c echo.Context) ([]messages.Worker, error) {
-	workers := w.Orquestrator.ListWorkers(nil)
+	workers := w.Orquestrator.ListWorkers()
 	response := make([]messages.Worker, 0)
 
 	for i := range workers {
-		response = append(response, messages.Worker{Id: int(workers[i].ID), NetId: workers[i].Token, Online: workers[i].Online})
+		response = append(response, messages.Worker{Id: workers[i].ID, Online: workers[i].Online})
 	}
 
 	return response, nil

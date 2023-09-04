@@ -13,12 +13,8 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/filters"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/models"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/services/experiments"
-	seworkers "github.com/namelew/mqtt-bm-latency/internal/orquestrator/databases/services/workers"
-	"github.com/namelew/mqtt-bm-latency/packages/housekeeper"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data/models"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 	tout "github.com/namelew/mqtt-bm-latency/packages/timeout"
@@ -31,40 +27,33 @@ type queue struct {
 }
 
 type Orquestrator struct {
-	log         *logs.Log
-	workers     *seworkers.Workers
-	experiments *experiments.Experiments
-	client      mqtt.Client
-	waitGroup   *waitgroup.WaitGroup
-	hk          *housekeeper.Housekeeper
-	response    *queue
-	tolerance   int
+	log       *logs.Log
+	client    mqtt.Client
+	waitGroup *waitgroup.WaitGroup
+	response  *queue
+	tolerance int
 }
 
-func Build(c mqtt.Client, l *logs.Log,t int, hki int) *Orquestrator {
+func Build(c mqtt.Client, l *logs.Log, t int, hki int) *Orquestrator {
 	return &Orquestrator{
-		log:         l,
-		workers:     seworkers.Build(l),
-		experiments: experiments.Build(l),
-		waitGroup:   waitgroup.New(),
+		log:       l,
+		waitGroup: waitgroup.New(),
 		response: &queue{
 			items: []messages.ExperimentResult{},
 			m:     &sync.Mutex{},
 		},
-		hk:        housekeeper.New(time.Hour*time.Duration(hki), l),
 		client:    c,
 		tolerance: t,
 	}
 }
 
-func (o Orquestrator) ListWorkers(filter *filters.Worker) []models.Worker {
-	workers, _ := o.workers.List(filter)
-	return workers
+func (o Orquestrator) ListWorkers() []models.Worker {
+	return data.WorkersTable.List()
 }
 
-func (o Orquestrator) GetWorker(id int) *models.Worker {
-	worker, _ := o.workers.Get(id)
-	return worker
+func (o Orquestrator) GetWorker(id string) *models.Worker {
+	worker, _ := data.WorkersTable.Get(id)
+	return &worker
 }
 
 func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func(t context.Context, tk, tp string, tl int)) {
@@ -81,7 +70,7 @@ func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func(t context.Contex
 func (o Orquestrator) Init() error {
 	o.log.Register("Starting database")
 
-	databases.Connect(o.log)
+	data.Init(o.log)
 
 	o.client.Subscribe("Orquestrator/Register", 1, func(c mqtt.Client, m mqtt.Message) {
 		go func(messagePayload []byte) {
@@ -94,7 +83,7 @@ func (o Orquestrator) Init() error {
 				clientID += fmt.Sprintf("%d", random.Int()%10)
 			}
 
-			o.workers.Add(models.Worker{Token: clientID, KeepAliveDeadline: 1, Online: false, Experiments: nil})
+			data.WorkersTable.Add(clientID, models.Worker{ID: clientID, KeepAliveDeadline: 1, Online: false})
 
 			o.setMessageHandler(&clientID)
 
@@ -108,7 +97,16 @@ func (o Orquestrator) Init() error {
 		go func(messagePayload []byte) {
 			token := string(messagePayload)
 
-			o.workers.ChangeStatus(&filters.Worker{Token: token, Online: true})
+			worker, err := data.WorkersTable.Get(token)
+
+			if err != nil {
+				o.log.Register("Login error: unable to find worker with id " + token)
+				return
+			}
+
+			worker.Online = true
+
+			data.WorkersTable.Update(worker.ID, worker)
 
 			o.log.Register("worker " + token + " loged")
 
@@ -128,15 +126,21 @@ func (o Orquestrator) Init() error {
 				case <-time.After(time.Second * time.Duration(tl)):
 					o.client.Unsubscribe(tk + tp)
 					o.log.Register("lost connection with worker " + tk)
-					o.workers.ChangeStatus(&filters.Worker{Token: tk, Online: false})
+
+					worker, err := data.WorkersTable.Get(tk)
+
+					if err != nil {
+						o.log.Register("Timeout error: unable to find worker with id " + tk)
+						return
+					}
+
+					worker.Online = false
+
+					data.WorkersTable.Update(worker.ID, worker)
 				}
 			})
 		}(m.Payload())
 	})
-
-	o.hk.Place(o.experiments)
-	o.hk.Place(o.workers)
-	go o.hk.Start()
 
 	return nil
 }
@@ -151,7 +155,7 @@ func (o Orquestrator) End() {
 
 func (o *Orquestrator) setMessageHandler(t *string) {
 	o.client.Subscribe(*t+"/Experiments/Results", 2, func(c mqtt.Client, m mqtt.Message) {
-		go func (payload []byte)  {
+		go func(payload []byte) {
 			var output messages.ExperimentResult
 
 			err := json.Unmarshal(payload, &output)
@@ -169,14 +173,14 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 	})
 
 	o.client.Subscribe(*t+"/Experiments/Status", 2, func(c mqtt.Client, m mqtt.Message) {
-		func (payload []byte) {
+		func(payload []byte) {
 			var exps messages.Status
 			json.Unmarshal(payload, &exps)
 
 			tokens := strings.Split(exps.Type, " ")
 			expid, _ := strconv.Atoi(tokens[2])
 
-			exp,err := o.experiments.Get(uint64(expid))
+			exp, err := data.ExperimentTable.Get(uint64(expid))
 
 			if err != nil {
 				return
@@ -204,7 +208,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	o.response.m.Unlock()
 
 	var cmd messages.Command
-	var experiment messages.CommandExperiment
+	var description messages.CommandExperiment
 	var nwkrs int = 0
 	var timeoutIsValid = true
 	var validMutex sync.Mutex = sync.Mutex{}
@@ -212,10 +216,10 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	cmd.Name = "start"
 	cmd.CommandType = "experiment command"
 
-	experiment.Expid = expid
-	experiment.Declaration = arg.Description
+	description.Expid = expid
+	description.Declaration = arg.Description
 
-	err := experiment.Attach(&cmd)
+	err := description.Attach(&cmd)
 
 	if err != nil {
 		return o.response.items, err
@@ -227,13 +231,11 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 		return o.response.items, err
 	}
 
-	o.experiments.Add(
+	data.ExperimentTable.Add(
+		uint64(expid),
 		models.Experiment{
-			ID:     uint64(expid),
-			Finish: false,
-		},
-		models.ExperimentDeclaration{
-			Tool:                  arg.Description.Tool,
+			ID:                    uint64(expid),
+			Finish:                false,
 			Broker:                arg.Description.Broker,
 			Port:                  arg.Description.Port,
 			MqttVersion:           arg.Description.MqttVersion,
@@ -260,12 +262,12 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 			TlsTruststorePassword: arg.Description.TlsTruststorePassword,
 			TlsKeystore:           arg.Description.TlsKeystore,
 			TlsKeystorePassword:   arg.Description.TlsKeystorePassword,
+			WorkerIDs:             arg.Id,
 		},
-		arg.Id...,
 	)
 
-	if arg.Id[0] == -1 {
-		workers, err := o.workers.List(nil)
+	if arg.Id[0] == "" {
+		workers := data.WorkersTable.List()
 
 		if err != nil {
 			o.log.Register("Fail in experiment request. No workers")
@@ -278,48 +280,44 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 		for i := range workers {
 			if !workers[i].Online {
-				o.log.Register("Worker " + workers[i].Token + " is off, skipping")
+				o.log.Register("Worker " + workers[i].ID + " is off, skipping")
 				continue
 			}
 
-			(o.client.Publish(workers[i].Token+"/Command", 1, false, msg)).Wait()
+			(o.client.Publish(workers[i].ID+"/Command", 2, false, msg)).Wait()
 
 			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
-			o.log.Register("Requesting experiment in worker " + workers[i].Token)
+			o.log.Register("Requesting experiment in worker " + workers[i].ID)
 		}
 	} else {
 		workers := make([]*models.Worker, 10)
 
 		for _, i := range arg.Id {
-			worker,err := o.workers.Get(i)
+			worker, err := data.WorkersTable.Get(i)
 
 			if err != nil {
-				o.log.Register(fmt.Sprintf("Unable to request experiment to worker %d", i))
-				continue
+				o.log.Register(fmt.Sprintf("Experiment Error: Unable to find worker %s, skipping", i))
+				return o.response.items, fmt.Errorf("unable to find worker %s", i)
 			}
 
-			workers = append(workers, worker)
+			workers = append(workers, &worker)
 		}
 
 		nwkrs = len(workers)
-
-		if nwkrs == 0 {
-			return nil, errors.New("Unable to select desired workers")
-		}
 
 		o.waitGroup.Add(nwkrs)
 
 		for i := range workers {
 			if !workers[i].Online {
-				o.log.Register("Worker " + workers[i].Token + " is off, skipping")
+				o.log.Register("Worker " + workers[i].ID + " is off, skipping")
 			}
 
-			(o.client.Publish(workers[i].Token+"/Command", 1, false, msg)).Wait()
+			(o.client.Publish(workers[i].ID+"/Command", 1, false, msg)).Wait()
 
 			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
-			o.log.Register("Requesting experiment in worker " + workers[i].Token)
+			o.log.Register("Requesting experiment in worker " + workers[i].ID)
 		}
 	}
 
@@ -331,20 +329,29 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 	o.response.m.Lock()
 
+	experiment, err := data.ExperimentTable.Get(uint64(expid))
+
+	if err != nil {
+		return o.response.items, errors.New("failed to run experiment, don't find experiment id database")
+	}
+
+	experiment.Finish = true
+
 	if len(o.response.items) < nwkrs {
 		o.response.m.Unlock()
-		go o.experiments.Update(uint64(expid), models.Experiment{Finish: true, Error: fmt.Sprintf("%d workers have failed to run the experiment", nwkrs-len(o.response.items))})
-		return o.response.items, errors.New("failed to run experiment")
+		experiment.Error = fmt.Sprintf("%d workers have failed to run the experiment", nwkrs-len(o.response.items))
+		data.ExperimentTable.Update(experiment.ID, experiment)
+		return o.response.items, errors.New("failed to run experiment. Workers don't return")
 	}
 
 	o.response.m.Unlock()
 
-	go o.experiments.Update(uint64(expid), models.Experiment{Finish: true})
+	data.ExperimentTable.Update(experiment.ID, experiment)
 
 	return o.response.items, nil
 }
 
-func (o Orquestrator) CancelExperiment(id int, expid int64) error {
+func (o Orquestrator) CancelExperiment(id string, expid int64) error {
 	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: make(map[string]interface{})}
 
 	cmd.Arguments["id"] = expid
@@ -356,14 +363,14 @@ func (o Orquestrator) CancelExperiment(id int, expid int64) error {
 		return err
 	}
 
-	worker, err := o.workers.Get(id)
+	worker, err := data.WorkersTable.Get(id)
 
 	if err != nil {
 		o.log.Register("Unable to find desired worker")
 		return err
 	}
 
-	(o.client.Publish(worker.Token+"/Command", 1, false, msg)).Wait()
+	(o.client.Publish(worker.ID+"/Command", 1, false, msg)).Wait()
 
 	o.waitGroup.Done()
 

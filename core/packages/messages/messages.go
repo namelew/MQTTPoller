@@ -52,15 +52,14 @@ type Experiment struct {
 }
 
 type Start struct {
-	Id          []int      `json:"id"`
+	Id          []string   `json:"id"`
 	Attempts    uint       `json:"attempts"`
 	Description Experiment `json:"description"`
 }
 
 type Worker struct {
-	Id      int
-	NetId   string
-	Online  bool
+	Id     string
+	Online bool
 }
 
 type SubscriberExperimentResult struct {

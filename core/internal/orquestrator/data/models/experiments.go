@@ -1,21 +1,7 @@
 package models
 
-import "time"
-
 type Experiment struct {
-	ID                      uint64 `gorm:"primarykey"`
-	ExperimentDeclarationID uint64
-	Finish                  bool
-	Error                   string
-	CreatedAt               time.Time
-	UpdatedAt               time.Time
-	Workers                 []*Worker             `gorm:"many2many:experiments_workers;"`
-	ExperimentDeclaration   ExperimentDeclaration `gorm:"foreignKey:ExperimentDeclarationID;references:ID"`
-}
-
-type ExperimentDeclaration struct {
-	ID                    uint64 `gorm:"primarykey"`
-	Tool                  string `json:"tool"`
+	ID                    uint64
 	Broker                string `json:"broker"`
 	Port                  int    `json:"port"`
 	MqttVersion           int    `json:"mqttVersion"`
@@ -42,4 +28,7 @@ type ExperimentDeclaration struct {
 	TlsTruststorePassword string `json:"tlsTruststorePass"`
 	TlsKeystore           string `json:"tlsKeystore"`
 	TlsKeystorePassword   string `json:"tlsKeystorePass"`
+	Finish                bool
+	Error                 string
+	WorkerIDs             []string
 }
