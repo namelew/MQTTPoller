@@ -19,7 +19,7 @@ services:
     container_name: orquestrator
     build:
       context: ./
-      dockerfile: ./images/orquestrator/prod/Dockerfile
+      dockerfile: ./images/orquestrator/Dockerfile
     image: mqttdb/orquestrator:latest
     deploy:
       resources:
@@ -42,7 +42,7 @@ services:
     container_name: worker
     build:
       context: ./
-      dockerfile: ./images/worker/prod/Dockerfile
+      dockerfile: ./images/worker/Dockerfile
     image: mqttdb/worker:latest
     deploy:
       resources:
@@ -64,7 +64,7 @@ services:
     container_name: worker-2
     build:
       context: ./
-      dockerfile: ./images/worker/prod/Dockerfile
+      dockerfile: ./images/worker/Dockerfile
     image: mqttdb/worker:latest
     deploy:
       resources:
@@ -86,7 +86,7 @@ services:
     container_name: worker-3
     build:
       context: ./
-      dockerfile: ./images/worker/prod/Dockerfile
+      dockerfile: ./images/worker/Dockerfile
     image: mqttdb/worker:latest
     deploy:
       resources:
