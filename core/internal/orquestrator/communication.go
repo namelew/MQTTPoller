@@ -302,14 +302,14 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) models.Experiment {
 
 			(o.client.Publish(workers[i].ID+"/Command", 2, false, msg)).Wait()
 
-			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
+			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*o.tolerance, arg.Attempts)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].ID)
 		}
 
 		experiment.WorkerIDs = workersIDs
 	} else {
-		workers := make([]*models.Worker, 10)
+		workers := make([]*models.Worker, 0)
 
 		for _, i := range arg.Id {
 			worker, err := data.WorkersTable.Get(i)
@@ -335,7 +335,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) models.Experiment {
 
 			(o.client.Publish(workers[i].ID+"/Command", 1, false, msg)).Wait()
 
-			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
+			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*10, arg.Attempts)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].ID)
 		}
