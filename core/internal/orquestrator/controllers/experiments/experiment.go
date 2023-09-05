@@ -37,7 +37,7 @@ func (e Experiments) StartExperiment(c echo.Context) ([]messages.ExperimentResul
 }
 
 func (e Experiments) CancelExperiment(c echo.Context) error {
-	expid, err := strconv.Atoi(c.Param("expid"))
+	expid, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
 		return echo.ErrBadRequest
