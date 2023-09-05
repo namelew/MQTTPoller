@@ -71,3 +71,19 @@ func (e Experiments) Get(c echo.Context) (models.Experiment, error) {
 func (e Experiments) List(c echo.Context) ([]models.Experiment, error) {
 	return e.Orquestrator.ListExperiments(), nil
 }
+
+func (e Experiments) Delete(c echo.Context) error {
+	expid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	err = e.Orquestrator.DeleteExperiment(expid)
+
+	if err != nil {
+		return echo.NewHTTPError(500, "Unable to delete experiment. "+err.Error())
+	}
+
+	return nil
+}

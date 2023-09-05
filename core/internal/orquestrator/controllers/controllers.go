@@ -60,6 +60,12 @@ func (cs Controller) List(c echo.Context) error {
 func (cs Controller) Delete(c echo.Context) error {
 	switch x := c.Request().URL.Path; {
 	case x[:24] == "/orquestrator/experiment":
+		err := cs.exp.Delete(c)
+
+		if err != nil {
+			return err
+		}
+
 		return c.JSON(200, nil)
 	}
 	return echo.ErrBadRequest

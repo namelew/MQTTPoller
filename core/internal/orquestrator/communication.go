@@ -63,6 +63,10 @@ func (o Orquestrator) GetExperiment(id uint64) (models.Experiment, error) {
 	return data.ExperimentTable.Get(id)
 }
 
+func (o Orquestrator) DeleteExperiment(id uint64) error {
+	return data.ExperimentTable.Remove(id)
+}
+
 func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func(t context.Context, tk, tp string, tl int)) {
 	timer, cancel := context.WithCancel(context.Background())
 
