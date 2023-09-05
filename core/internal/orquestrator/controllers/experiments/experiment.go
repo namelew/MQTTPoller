@@ -2,6 +2,7 @@ package experiments
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/labstack/echo"
@@ -22,13 +23,16 @@ func (e Experiments) StartExperiment(c echo.Context) ([]messages.ExperimentResul
 		return []messages.ExperimentResult{}, echo.ErrBadRequest
 	}
 
-	response, err := e.Orquestrator.StartExperiment(request)
+	experiment := e.Orquestrator.StartExperiment(request)
 
-	if err != nil {
-		return []messages.ExperimentResult{}, echo.ErrInternalServerError
+	if experiment.Error != "" {
+		return experiment.Results, echo.NewHTTPError(
+			500,
+			fmt.Sprintf("Experiment Error: %s on workers %v", experiment.Error, experiment.WorkerIDs),
+		)
 	}
 
-	return response, nil
+	return experiment.Results, nil
 }
 
 func (e Experiments) CancelExperiment(c echo.Context) error {

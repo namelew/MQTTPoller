@@ -3,7 +3,6 @@ package orquestrator
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -19,6 +18,7 @@ import (
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 	tout "github.com/namelew/mqtt-bm-latency/packages/timeout"
 	"github.com/namelew/mqtt-bm-latency/packages/waitgroup"
+	"golang.org/x/exp/slices"
 )
 
 type queue struct {
@@ -194,7 +194,7 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 	})
 }
 
-func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.ExperimentResult, error) {
+func (o *Orquestrator) StartExperiment(arg messages.Start) models.Experiment {
 	expid := time.Now().Unix()
 
 	o.response.m.Lock()
@@ -216,59 +216,68 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 	err := description.Attach(&cmd)
 
 	if err != nil {
-		return o.response.items, err
+		return models.Experiment{
+			ID:     uint64(expid),
+			Finish: true,
+			Error:  err.Error(),
+		}
 	}
 
 	msg, err := json.Marshal(cmd)
 
 	if err != nil {
-		return o.response.items, err
+		return models.Experiment{
+			ID:     uint64(expid),
+			Finish: true,
+			Error:  err.Error(),
+		}
 	}
 
-	data.ExperimentTable.Add(
-		uint64(expid),
-		models.Experiment{
-			ID:                    uint64(expid),
-			Finish:                false,
-			Broker:                arg.Description.Broker,
-			Port:                  arg.Description.Port,
-			MqttVersion:           arg.Description.MqttVersion,
-			NumPublishers:         arg.Description.NumPublishers,
-			NumSubscriber:         arg.Description.NumSubscriber,
-			QosPublisher:          arg.Description.QosPublisher,
-			QosSubscriber:         arg.Description.QosSubscriber,
-			SharedSubscrition:     arg.Description.SharedSubscrition,
-			Retain:                arg.Description.Retain,
-			Topic:                 arg.Description.Topic,
-			Payload:               arg.Description.Payload,
-			NumMessages:           arg.Description.NumMessages,
-			RampUp:                arg.Description.RampUp,
-			RampDown:              arg.Description.RampDown,
-			Interval:              arg.Description.Interval,
-			SubscriberTimeout:     arg.Description.SubscriberTimeout,
-			ExecTime:              arg.Description.ExecTime,
-			LogLevel:              arg.Description.LogLevel,
-			Ntp:                   arg.Description.Ntp,
-			Output:                arg.Description.Output,
-			User:                  arg.Description.User,
-			Password:              arg.Description.Password,
-			TlsTrustsore:          arg.Description.TlsTrustsore,
-			TlsTruststorePassword: arg.Description.TlsTruststorePassword,
-			TlsKeystore:           arg.Description.TlsKeystore,
-			TlsKeystorePassword:   arg.Description.TlsKeystorePassword,
-			WorkerIDs:             arg.Id,
-		},
-	)
+	experiment := models.Experiment{
+		ID:                    uint64(expid),
+		Finish:                false,
+		Broker:                arg.Description.Broker,
+		Port:                  arg.Description.Port,
+		MqttVersion:           arg.Description.MqttVersion,
+		NumPublishers:         arg.Description.NumPublishers,
+		NumSubscriber:         arg.Description.NumSubscriber,
+		QosPublisher:          arg.Description.QosPublisher,
+		QosSubscriber:         arg.Description.QosSubscriber,
+		SharedSubscrition:     arg.Description.SharedSubscrition,
+		Retain:                arg.Description.Retain,
+		Topic:                 arg.Description.Topic,
+		Payload:               arg.Description.Payload,
+		NumMessages:           arg.Description.NumMessages,
+		RampUp:                arg.Description.RampUp,
+		RampDown:              arg.Description.RampDown,
+		Interval:              arg.Description.Interval,
+		SubscriberTimeout:     arg.Description.SubscriberTimeout,
+		ExecTime:              arg.Description.ExecTime,
+		LogLevel:              arg.Description.LogLevel,
+		Ntp:                   arg.Description.Ntp,
+		Output:                arg.Description.Output,
+		User:                  arg.Description.User,
+		Password:              arg.Description.Password,
+		TlsTrustsore:          arg.Description.TlsTrustsore,
+		TlsTruststorePassword: arg.Description.TlsTruststorePassword,
+		TlsKeystore:           arg.Description.TlsKeystore,
+		TlsKeystorePassword:   arg.Description.TlsKeystorePassword,
+		WorkerIDs:             arg.Id,
+	}
+
+	data.ExperimentTable.Add(uint64(expid), experiment)
 
 	if arg.Id[0] == "" {
 		workers := data.WorkersTable.List()
-
-		if err != nil {
-			o.log.Register("Fail in experiment request. No workers")
-			return nil, err
-		}
-
 		nwkrs = len(workers)
+		workersIDs := make([]string, 0, nwkrs)
+
+		if nwkrs < 1 {
+			const errMessage = "Fail in experiment request. No workers"
+			o.log.Register(errMessage)
+			experiment.Error = errMessage
+			return experiment
+		}
 
 		o.waitGroup.Add(nwkrs)
 
@@ -278,12 +287,16 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 				continue
 			}
 
+			workersIDs = append(workersIDs, workers[i].ID)
+
 			(o.client.Publish(workers[i].ID+"/Command", 2, false, msg)).Wait()
 
 			go o.expTimeount(&timeoutIsValid, &validMutex, uint64(expid), arg.Description.ExecTime*5, arg.Attempts)
 
 			o.log.Register("Requesting experiment in worker " + workers[i].ID)
 		}
+
+		experiment.WorkerIDs = workersIDs
 	} else {
 		workers := make([]*models.Worker, 10)
 
@@ -291,8 +304,10 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 			worker, err := data.WorkersTable.Get(i)
 
 			if err != nil {
-				o.log.Register(fmt.Sprintf("Experiment Error: Unable to find worker %s, skipping", i))
-				return o.response.items, fmt.Errorf("unable to find worker %s", i)
+				errorMessage := fmt.Sprintf("Experiment Error: Unable to find worker %s, skipping", i)
+				o.log.Register(errorMessage)
+				experiment.Error = errorMessage
+				return experiment
 			}
 
 			workers = append(workers, &worker)
@@ -323,27 +338,26 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) ([]messages.Experimen
 
 	o.response.m.Lock()
 
-	experiment, err := data.ExperimentTable.Get(uint64(expid))
-
 	if err != nil {
-		return o.response.items, errors.New("failed to run experiment, don't find experiment id database")
+		experiment.Error = "failed to run experiment, don't find experiment id database"
+		return experiment
 	}
 
 	experiment.Finish = true
-	experiment.Results = o.response.items
+	experiment.Results = slices.Clone[[]messages.ExperimentResult](o.response.items)
 
 	if len(o.response.items) < nwkrs {
 		o.response.m.Unlock()
 		experiment.Error = fmt.Sprintf("%d workers have failed to run the experiment", nwkrs-len(o.response.items))
 		data.ExperimentTable.Update(experiment.ID, experiment)
-		return o.response.items, errors.New("failed to run experiment. Workers don't return")
+		return experiment
 	}
 
 	o.response.m.Unlock()
 
 	data.ExperimentTable.Update(experiment.ID, experiment)
 
-	return o.response.items, nil
+	return experiment
 }
 
 func (o Orquestrator) CancelExperiment(id string, expid int64) error {
