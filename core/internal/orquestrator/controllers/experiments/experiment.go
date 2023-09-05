@@ -42,7 +42,7 @@ func (e Experiments) CancelExperiment(c echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	err = e.Orquestrator.CancelExperiment(c.Param("id"), int64(expid))
+	err = e.Orquestrator.CancelExperiment(int64(expid))
 
 	if err != nil {
 		return echo.ErrInternalServerError

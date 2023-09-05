@@ -360,7 +360,7 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) models.Experiment {
 	return experiment
 }
 
-func (o Orquestrator) CancelExperiment(id string, expid int64) error {
+func (o Orquestrator) CancelExperiment(expid int64) error {
 	cmd := messages.Command{Name: "cancel", CommandType: "moderation command", Arguments: make(map[string]interface{})}
 
 	cmd.Arguments["id"] = expid
@@ -372,16 +372,26 @@ func (o Orquestrator) CancelExperiment(id string, expid int64) error {
 		return err
 	}
 
-	worker, err := data.WorkersTable.Get(id)
+	experiment, err := data.ExperimentTable.Get(uint64(expid))
 
 	if err != nil {
-		o.log.Register("Unable to find desired worker")
+		o.log.Register("Unable to find experimento to cancel")
 		return err
 	}
 
-	(o.client.Publish(worker.ID+"/Command", 1, false, msg)).Wait()
+	for _, workerid := range experiment.WorkerIDs {
+		token := o.client.Publish(workerid+"/Command", 2, false, msg)
 
-	o.waitGroup.Done()
+		go func(t mqtt.Token, wid string) {
+			<-t.Done()
+
+			if t.Error() != nil {
+				o.log.Register("Unable to send experiment cancel message to worker " + wid + ". " + t.Error().Error())
+			}
+		}(token, workerid)
+
+		o.waitGroup.Done()
+	}
 
 	return nil
 }
