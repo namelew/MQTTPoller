@@ -51,9 +51,16 @@ func (o Orquestrator) ListWorkers() []models.Worker {
 	return data.WorkersTable.List()
 }
 
-func (o Orquestrator) GetWorker(id string) *models.Worker {
-	worker, _ := data.WorkersTable.Get(id)
-	return &worker
+func (o Orquestrator) ListExperiments() []models.Experiment {
+	return data.ExperimentTable.List()
+}
+
+func (o Orquestrator) GetWorker(id string) (models.Worker, error) {
+	return data.WorkersTable.Get(id)
+}
+
+func (o Orquestrator) GetExperiment(id uint64) (models.Experiment, error) {
+	return data.ExperimentTable.Get(id)
 }
 
 func (o Orquestrator) timeout(t *tout.Timeout, timeHandler func(t context.Context, tk, tp string, tl int)) {

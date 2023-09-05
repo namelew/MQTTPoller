@@ -11,7 +11,11 @@ type Workers struct {
 }
 
 func (w Workers) Get(c echo.Context) (messages.Worker, error) {
-	worker := w.Orquestrator.GetWorker(c.Param("id"))
+	worker, err := w.Orquestrator.GetWorker(c.Param("id"))
+
+	if err != nil {
+		return messages.Worker{}, echo.NewHTTPError(500, err.Error())
+	}
 
 	response := messages.Worker{Id: worker.ID, Online: worker.Online}
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo"
 	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
+	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data/models"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
 )
 
@@ -49,4 +50,24 @@ func (e Experiments) CancelExperiment(c echo.Context) error {
 	}
 
 	return nil
+}
+
+func (e Experiments) Get(c echo.Context) (models.Experiment, error) {
+	expid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+
+	if err != nil {
+		return models.Experiment{}, echo.ErrBadRequest
+	}
+
+	exp, err := e.Orquestrator.GetExperiment(expid)
+
+	if err != nil {
+		return exp, echo.NewHTTPError(500, err.Error())
+	}
+
+	return exp, nil
+}
+
+func (e Experiments) List(c echo.Context) ([]models.Experiment, error) {
+	return e.Orquestrator.ListExperiments(), nil
 }
