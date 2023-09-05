@@ -3,7 +3,6 @@ package worker
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -103,17 +102,31 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64) {
 	return arguments.Declaration.Output, arguments.Expid
 }
 
+func sanitizeStrings(s string) string {
+	garbage := []string{"\n", "\t", "\r", "\a", "\f", "\v", "\b", " "}
+
+	for _, str := range garbage {
+		s = strings.ReplaceAll(s, str, "")
+	}
+
+	return s
+}
+
 func extracExperimentResults(output string, createLog bool) messages.ExperimentResult {
 	results := messages.ExperimentResult{}
 	results.Meta.Literal = output
 
 	temp := [12]string{}
+	var err error
 
 	i := 0
-	for _, s := range strings.Split(output, "\n") {
-		if s != "" && s[0] != '-' {
-			data := strings.Split(s, ": ")
-			if len(data) < 2 {
+
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, ":") {
+			data := strings.Split(sanitizeStrings(line), ":")
+			if len(data) < 2 || data[0] == "ERROR" {
+				log.Register("Experiment Error: " + output)
 				results.Meta.ExperimentError = output
 				return results
 			}
@@ -124,26 +137,103 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 	results.Meta.ToolName = "mqttLoader"
 	results.Meta.ExperimentError = ""
 
-	results.Publish.Throughput, _ = strconv.ParseFloat(strings.Replace(temp[2], ",", ".", 1), 64)
-	results.Publish.AvgThroughput, _ = strconv.ParseFloat(strings.Replace(temp[3], ",", ".", 1), 64)
-	results.Publish.PubMessages, _ = strconv.Atoi(temp[4])
+	results.Publish.Throughput, err = strconv.ParseFloat(strings.Replace(temp[2], ",", ".", 1), 64)
 
-	for _, s := range strings.Split(temp[5], ", ") {
-		aux, _ := strconv.Atoi(s)
+	if err != nil {
+		errorMessage := "Unable to parse data. " + err.Error()
+		log.Register("Experiment Error: " + errorMessage)
+		results.Meta.ExperimentError = errorMessage
+		return results
+	}
+
+	results.Publish.AvgThroughput, err = strconv.ParseFloat(strings.Replace(temp[3], ",", ".", 1), 64)
+
+	if err != nil {
+		errorMessage := "Unable to parse data. " + err.Error()
+		log.Register("Experiment Error: " + errorMessage)
+		results.Meta.ExperimentError = errorMessage
+		return results
+	}
+
+	results.Publish.PubMessages, err = strconv.Atoi(temp[4])
+
+	if err != nil {
+		errorMessage := "Unable to parse data. " + err.Error()
+		log.Register("Experiment Error: " + errorMessage)
+		results.Meta.ExperimentError = errorMessage
+		return results
+	}
+
+	for _, s := range strings.Split(temp[5], ",") {
+		aux, err := strconv.Atoi(s)
+
+		if err != nil {
+			errorMessage := "Unable to parse data. " + err.Error()
+			log.Register("Experiment Error: " + errorMessage)
+			results.Meta.ExperimentError = errorMessage
+			return results
+		}
+
 		results.Publish.PerSecondThrouput = append(results.Publish.PerSecondThrouput, aux)
 	}
 
-	results.Subscribe.Throughput, _ = strconv.ParseFloat(strings.Replace(temp[6], ",", ".", 1), 64)
-	results.Subscribe.AvgThroughput, _ = strconv.ParseFloat(strings.Replace(temp[7], ",", ".", 1), 64)
-	results.Subscribe.ReceivedMessages, _ = strconv.Atoi(temp[8])
+	results.Subscribe.Throughput, err = strconv.ParseFloat(strings.Replace(temp[6], ",", ".", 1), 64)
 
-	for _, s := range strings.Split(temp[9], ", ") {
-		aux, _ := strconv.Atoi(s)
+	if err != nil {
+		errorMessage := "Unable to parse data. " + err.Error()
+		log.Register("Experiment Error: " + errorMessage)
+		results.Meta.ExperimentError = errorMessage
+		return results
+	}
+
+	results.Subscribe.AvgThroughput, err = strconv.ParseFloat(strings.Replace(temp[7], ",", ".", 1), 64)
+
+	if err != nil {
+		errorMessage := "Unable to parse data. " + err.Error()
+		log.Register("Experiment Error: " + errorMessage)
+		results.Meta.ExperimentError = errorMessage
+		return results
+	}
+
+	results.Subscribe.ReceivedMessages, err = strconv.Atoi(temp[8])
+
+	if err != nil {
+		errorMessage := "Unable to parse data. " + err.Error()
+		log.Register("Experiment Error: " + errorMessage)
+		results.Meta.ExperimentError = errorMessage
+		return results
+	}
+
+	for _, s := range strings.Split(temp[9], ",") {
+		aux, err := strconv.Atoi(s)
+
+		if err != nil {
+			errorMessage := "Unable to parse data. " + err.Error()
+			log.Register("Experiment Error: " + errorMessage)
+			results.Meta.ExperimentError = errorMessage
+			return results
+		}
+
 		results.Subscribe.PerSecondThrouput = append(results.Subscribe.PerSecondThrouput, aux)
 	}
 
-	results.Subscribe.Latency, _ = strconv.ParseFloat(strings.Replace(temp[10], ",", ".", 1), 64)
-	results.Subscribe.AvgLatency, _ = strconv.ParseFloat(strings.Replace(temp[11], ",", ".", 1), 64)
+	results.Subscribe.Latency, err = strconv.ParseFloat(strings.Replace(temp[10], ",", ".", 1), 64)
+
+	if err != nil {
+		errorMessage := "Unable to parse data. " + err.Error()
+		log.Register("Experiment Error: " + errorMessage)
+		results.Meta.ExperimentError = errorMessage
+		return results
+	}
+
+	results.Subscribe.AvgLatency, err = strconv.ParseFloat(strings.Replace(temp[11], ",", ".", 1), 64)
+
+	if err != nil {
+		errorMessage := "Unable to parse data. " + err.Error()
+		log.Register("Experiment Error: " + errorMessage)
+		results.Meta.ExperimentError = errorMessage
+		return results
+	}
 
 	if createLog {
 		var files []string
@@ -169,7 +259,15 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 			aux := strings.Split(f, "/")
 			name := aux[len(aux)-1]
 			if name[0:10] == "mqttloader" {
-				buffer, _ := ioutil.ReadFile(f)
+				buffer, err := os.ReadFile(f)
+
+				if err != nil {
+					errorMessage := "Unable to read data from output file. " + err.Error()
+					log.Register("Experiment Error: " + errorMessage)
+					results.Meta.ExperimentError = errorMessage
+					return results
+				}
+
 				results.Meta.LogFile.Data = buffer
 				results.Meta.LogFile.Name = name
 				results.Meta.LogFile.Extension = strings.Split(name, ".")[1]
