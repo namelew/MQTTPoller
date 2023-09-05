@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.1
+	github.com/google/uuid v1.3.1
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/tidwall/btree v1.6.0
-	github.com/google/uuid v1.3.1
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 )
 

@@ -113,8 +113,8 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 	for _, s := range strings.Split(output, "\n") {
 		if s != "" && s[0] != '-' {
 			data := strings.Split(s, ": ")
-			if data[0] == "ERROR" {
-				results.Meta.ExperimentError = data[1]
+			if len(data) < 2 {
+				results.Meta.ExperimentError = output
 				return results
 			}
 			temp[i] = data[1]
