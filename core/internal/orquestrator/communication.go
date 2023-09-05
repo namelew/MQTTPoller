@@ -34,7 +34,7 @@ type Orquestrator struct {
 	tolerance int
 }
 
-func Build(c mqtt.Client, l *logs.Log, t int, hki int) *Orquestrator {
+func Build(c mqtt.Client, l *logs.Log, t int) *Orquestrator {
 	return &Orquestrator{
 		log:       l,
 		waitGroup: waitgroup.New(),
