@@ -108,7 +108,7 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 		os.Exit(3)
 	}
 
-	resultsExperiment := extracExperimentResults(output.String(), createLogFile)
+	resultsExperiment := extracExperimentResults(output.String(), stderr.String(), createLogFile)
 
 	if resultsExperiment.Meta.ExperimentError != "" {
 		mess, _ = json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: resultsExperiment.Meta.ExperimentError, Attr: messages.Command{}})

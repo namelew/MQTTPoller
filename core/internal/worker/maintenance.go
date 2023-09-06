@@ -112,9 +112,15 @@ func sanitizeStrings(s string) string {
 	return s
 }
 
-func extracExperimentResults(output string, createLog bool) messages.ExperimentResult {
+func extracExperimentResults(output string, logs string, createLog bool) messages.ExperimentResult {
 	results := messages.ExperimentResult{}
-	results.Meta.Literal = output
+	results.Meta.Literal = logs + output
+	results.Meta.ToolName = "mqttLoader"
+
+	if output == "" {
+		results.Meta.ExperimentError = "Tool runtime error"
+		return results
+	}
 
 	temp := [12]string{}
 	var err error
@@ -134,7 +140,6 @@ func extracExperimentResults(output string, createLog bool) messages.ExperimentR
 			i++
 		}
 	}
-	results.Meta.ToolName = "mqttLoader"
 	results.Meta.ExperimentError = ""
 
 	results.Publish.Throughput, err = strconv.ParseFloat(strings.Replace(temp[2], ",", ".", 1), 64)
