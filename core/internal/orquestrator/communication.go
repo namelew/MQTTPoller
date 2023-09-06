@@ -364,19 +364,11 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) models.Experiment {
 
 	o.response.m.Lock()
 
-	if err != nil {
-		experiment.Error = "failed to run experiment, don't find experiment id database"
-		return experiment
-	}
-
 	experiment.Finish = true
 	experiment.Results = slices.Clone[[]messages.ExperimentResult](o.response.items)
 
-	if len(o.response.items) < nwkrs {
-		o.response.m.Unlock()
-		experiment.Error = fmt.Sprintf("%d workers have failed to run the experiment", nwkrs-len(o.response.items))
-		data.ExperimentTable.Update(experiment.ID, experiment)
-		return experiment
+	if experiment.Error == "" && len(o.response.items) < nwkrs {
+		experiment.Error = fmt.Sprintf("%d workers haven't return the experiment result", nwkrs-len(o.response.items))
 	}
 
 	o.response.m.Unlock()
