@@ -170,10 +170,25 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 				return
 			}
 
-			o.response.m.Lock()
-			o.response.items = append(o.response.items, output)
-			o.response.m.Unlock()
-			o.waitGroup.Done()
+			exp, err := data.ExperimentTable.Get(output.Meta.ID)
+
+			if err != nil {
+				log.Println("Unknown experiment", output.Meta.ID, ". Discarting")
+				return
+			}
+
+			if !exp.Finish {
+				o.response.m.Lock()
+				o.response.items = append(o.response.items, output)
+				o.response.m.Unlock()
+				o.waitGroup.Done()
+			} else {
+				log.Println("Receiving delayed result to experiment ", exp.ID)
+				o.response.m.Lock()
+				exp.Results = append(exp.Results, output)
+				data.ExperimentTable.Update(exp.ID, exp)
+				o.response.m.Unlock()
+			}
 		}(m.Payload())
 	})
 
