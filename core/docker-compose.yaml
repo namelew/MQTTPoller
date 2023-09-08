@@ -20,15 +20,6 @@ services:
     build:
       context: ./
       dockerfile: ./images/orquestrator/Dockerfile
-    image: mqttdb/orquestrator:latest
-    deploy:
-      resources:
-        limits:
-          #cpus: '0.40'
-          memory: 30M
-        reservations:
-          #cpus: '0.30'
-          memory: 10M
     ports:
       - 8000:8000
     networks:
@@ -43,15 +34,6 @@ services:
     build:
       context: ./
       dockerfile: ./images/worker/Dockerfile
-    image: mqttdb/worker:latest
-    deploy:
-      resources:
-        limits:
-          cpus: '0.30'
-          memory: 30M
-        reservations:
-          cpus: '0.20'
-          memory: 10M
     networks:
      - example_experiment_network
     environment:
@@ -65,15 +47,6 @@ services:
     build:
       context: ./
       dockerfile: ./images/worker/Dockerfile
-    image: mqttdb/worker:latest
-    deploy:
-      resources:
-        limits:
-          cpus: '0.30'
-          memory: 30M
-        reservations:
-          cpus: '0.20'
-          memory: 10M
     networks:
      - example_experiment_network
     environment:
@@ -87,15 +60,6 @@ services:
     build:
       context: ./
       dockerfile: ./images/worker/Dockerfile
-    image: mqttdb/worker:latest
-    deploy:
-      resources:
-        limits:
-          cpus: '0.30'
-          memory: 30M
-        reservations:
-          cpus: '0.20'
-          memory: 10M
     networks:
      - example_experiment_network
     environment:

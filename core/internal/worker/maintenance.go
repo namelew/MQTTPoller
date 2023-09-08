@@ -428,8 +428,9 @@ func connect(w *Worker) {
 		SetCleanSession(true).
 		SetAutoReconnect(true).
 		SetKeepAlive(ka).
-		SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {}).
-		SetConnectionLostHandler(func(client mqtt.Client, reason error) {})
+		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
+			log.Register("Connection lost. Reason: " + reason.Error())
+		})
 
 	if makeRegister {
 		w.client = createClient(w, opts)

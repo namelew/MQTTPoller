@@ -8,23 +8,24 @@ import (
 )
 
 const (
-	ID string = "Orquestrator"
-	KEEPALIVE time.Duration = time.Second * 1000
+	ID        string        = "Orquestrator"
+	KEEPALIVE time.Duration = time.Second * 30
 )
 
 var main_log *logs.Log = nil
 
-func Create(b string, l *logs.Log) mqtt.Client{
+func Create(b string, l *logs.Log) mqtt.Client {
 	main_log = l
 
 	opts := mqtt.NewClientOptions().
 		AddBroker(b).
 		SetClientID(ID).
-		SetCleanSession(true).
+		SetCleanSession(false).
 		SetAutoReconnect(true).
 		SetKeepAlive(KEEPALIVE).
-		SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {}).
-		SetConnectionLostHandler(func(client mqtt.Client, reason error) {})
+		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
+			l.Register("Connection lost. Reason: " + reason.Error())
+		})
 
 	client := mqtt.NewClient(opts)
 
