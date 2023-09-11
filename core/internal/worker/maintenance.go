@@ -12,9 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"math/rand"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/google/uuid"
 	"github.com/namelew/mqtt-bm-latency/internal/worker/history"
 	"github.com/namelew/mqtt-bm-latency/packages/logs"
 	"github.com/namelew/mqtt-bm-latency/packages/messages"
@@ -285,20 +284,18 @@ func extracExperimentResults(output string, logs string, createLog bool) message
 }
 
 func getToken() (string, bool) {
-	var seed rand.Source
-	var random *rand.Rand
-	var token string = "Client_"
+	token := uuid.New().String()
 
 	makeRegister := !utils.FileExists("token.bin")
 
-	if makeRegister {
-		for i := 0; i < 10; i++ {
-			seed = rand.NewSource(time.Now().UnixNano())
-			random = rand.New(seed)
-			token += fmt.Sprintf("%d", random.Int()%10)
+	if !makeRegister {
+		data, err := os.ReadFile("token.bin")
+
+		if err != nil {
+			log.Register("Unable to open token file. " + err.Error())
+			return token, true
 		}
-	} else {
-		data, _ := os.ReadFile("token.bin")
+
 		token = strings.Split(string(data), "\n")[0]
 	}
 
