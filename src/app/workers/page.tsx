@@ -1,5 +1,5 @@
 'use client'
-import { Table, Thead, Tbody, Tr, Th, Td, Checkbox } from "@chakra-ui/react";
+import { Table, Thead, Tbody, Tr, Th, Td, Checkbox, Flex, Button } from "@chakra-ui/react";
 import { useState } from "react";
 import { IWorker } from "../interfaces/IWorker";
 
@@ -17,7 +17,7 @@ const Homepage = () => {
             }
             setSelectAll(!selectAll);
         }
-  };
+    };
 
     const handleSelectRow = (id:string) => {
         if (selectedWorkers.includes(id)) {
@@ -27,32 +27,41 @@ const Homepage = () => {
         }
     };
 
+    const startExperiment = () => {
+
+    };
+
     return (
-        <Table variant="simple">
-        <Thead>
-            <Tr>
-            <Th>
-                <Checkbox isChecked={selectAll} onChange={handleSelectAll} />
-            </Th>
-            <Th>ID</Th>
-            <Th>Status</Th>
-            </Tr>
-        </Thead>
-        <Tbody>
-            {workers?.map((worker) => (
-            <Tr key={worker.id}>
-                <Td>
-                <Checkbox
-                    isChecked={selectedWorkers.includes(worker.id)}
-                    onChange={() => handleSelectRow(worker.id)}
-                />
-                </Td>
-                <Td>{worker.id}</Td>
-                <Td>{worker.online ? 'Online' : 'Offline'}</Td>
-            </Tr>
-            ))}
-        </Tbody>
-        </Table>
+        <>
+            <Flex justifyContent={'flex-end'}>
+                <Button onClick={() => startExperiment()}>Iniciar Experimento</Button>
+            </Flex>
+            <Table variant="simple">
+                <Thead>
+                    <Tr>
+                    <Th>
+                        <Checkbox isChecked={selectAll} onChange={handleSelectAll} />
+                    </Th>
+                    <Th>ID</Th>
+                    <Th>Status</Th>
+                    </Tr>
+                </Thead>
+                <Tbody>
+                    {workers?.map((worker) => (
+                    <Tr key={worker.id}>
+                        <Td>
+                        <Checkbox
+                            isChecked={selectedWorkers.includes(worker.id)}
+                            onChange={() => handleSelectRow(worker.id)}
+                        />
+                        </Td>
+                        <Td>{worker.id}</Td>
+                        <Td>{worker.online ? 'Online' : 'Offline'}</Td>
+                    </Tr>
+                    ))}
+                </Tbody>
+            </Table>
+        </>
     );
 };
 
