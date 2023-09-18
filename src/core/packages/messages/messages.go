@@ -58,8 +58,8 @@ type Start struct {
 }
 
 type Worker struct {
-	Id     string
-	Online bool
+	Id     string `json:"id"`
+	Online bool   `json:"online"`
 }
 
 type SubscriberExperimentResult struct {
