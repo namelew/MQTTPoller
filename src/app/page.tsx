@@ -1,5 +1,5 @@
 'use client'
-import { Text, Heading, Divider, Container, Flex  } from '@chakra-ui/react';
+import { Text, Container } from '@chakra-ui/react';
 import Article from './components/article';
 
 export default function Home() {
@@ -13,7 +13,7 @@ export default function Home() {
           </Text>
         </Article>
       </Container>
-      <Container>
+      <Container p={1} centerContent>
         <Article title={ {text: 'A Aplicação'} }>
             <Text margin={1}>
               O MQTTPoller é uma interface para o MQTTLoader, que tem como objetivo facilitar o disparo de experimentos e a coleta de resultados. Para isso, utiliza uma arquitetura de orquestrador

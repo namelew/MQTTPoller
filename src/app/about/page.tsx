@@ -30,12 +30,16 @@ const Homepage = () => {
             </Container>
             <Container>
                 <Article title={ {text: 'Sobre a Instituição'} }>
-
-                </Article>
-            </Container>
-            <Container>
-                <Article title={ {text: 'Como Contribuir'} }>
-                    
+                    <Text margin={1}>
+                        A Universidade Federal da Fronteira Sul (UFFS) é uma instituição de ensino superior pública, popular e de qualidade. Criada pela Lei Nº 12.029,
+                        de 15 de setembro de 2009, a UFFS abrange mais de 400 municípios da Mesorregião Grande Fronteira do Mercosul – Sudoeste do Paraná, Oeste de
+                        Santa Catarina e Noroeste do Rio Grande do Sul.
+                    </Text>
+                    <Text margin={1}>
+                        Contando com mais de 50 cursos de graduação, a Universidade já ultrapassou a marca de 8 mil alunos e completou, em 2022, treze anos de história.
+                        As graduações oferecidas privilegiam as vocações da economia regional e estão em consonância com a Política Nacional de Formação de Professores
+                        do Ministério da Educação (MEC). Para ingressar na UFFS é preciso realizar o ENEM, pois a Universidade atualmente adota o SiSU como método de acesso à graduação.
+                    </Text>
                 </Article>
             </Container>
         </>
