@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/namelew/mqtt-bm-latency/packages/utils"
+	"github.com/namelew/mqtt-poller/core/packages/utils"
 )
 
 type Log struct {

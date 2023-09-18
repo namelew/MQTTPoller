@@ -2,8 +2,8 @@ package workers
 
 import (
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
-	"github.com/namelew/mqtt-bm-latency/packages/messages"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator"
+	"github.com/namelew/mqtt-poller/core/packages/messages"
 )
 
 type Workers struct {

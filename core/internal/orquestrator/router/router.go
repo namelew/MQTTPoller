@@ -2,8 +2,8 @@ package router
 
 import (
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/controllers"
 )
 
 func Route(o *orquestrator.Orquestrator, port string) {

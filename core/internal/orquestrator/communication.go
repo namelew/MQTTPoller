@@ -12,12 +12,12 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data/models"
-	"github.com/namelew/mqtt-bm-latency/packages/logs"
-	"github.com/namelew/mqtt-bm-latency/packages/messages"
-	tout "github.com/namelew/mqtt-bm-latency/packages/timeout"
-	"github.com/namelew/mqtt-bm-latency/packages/waitgroup"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/data"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/data/models"
+	"github.com/namelew/mqtt-poller/core/packages/logs"
+	"github.com/namelew/mqtt-poller/core/packages/messages"
+	tout "github.com/namelew/mqtt-poller/core/packages/timeout"
+	"github.com/namelew/mqtt-poller/core/packages/waitgroup"
 	"golang.org/x/exp/slices"
 )
 

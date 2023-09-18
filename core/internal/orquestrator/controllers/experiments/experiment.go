@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data/models"
-	"github.com/namelew/mqtt-bm-latency/packages/messages"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/data/models"
+	"github.com/namelew/mqtt-poller/core/packages/messages"
 )
 
 type Experiments struct {

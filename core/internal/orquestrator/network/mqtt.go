@@ -4,7 +4,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/namelew/mqtt-bm-latency/packages/logs"
+	"github.com/namelew/mqtt-poller/core/packages/logs"
 )
 
 const (

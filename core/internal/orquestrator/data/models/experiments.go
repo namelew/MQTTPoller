@@ -1,6 +1,6 @@
 package models
 
-import "github.com/namelew/mqtt-bm-latency/packages/messages"
+import "github.com/namelew/mqtt-poller/core/packages/messages"
 
 type Experiment struct {
 	ID                    uint64

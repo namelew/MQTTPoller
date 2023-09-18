@@ -1,4 +1,4 @@
-module github.com/namelew/mqtt-bm-latency
+module github.com/namelew/mqtt-poller
 
 go 1.21.0
 

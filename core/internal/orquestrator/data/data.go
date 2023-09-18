@@ -1,9 +1,9 @@
 package data
 
 import (
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data/models"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data/services"
-	"github.com/namelew/mqtt-bm-latency/packages/logs"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/data/models"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/data/services"
+	"github.com/namelew/mqtt-poller/core/packages/logs"
 )
 
 const EXPERIMENTS_DATA string = "experiments.data"

@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"github.com/labstack/echo"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers/experiments"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/controllers/workers"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/controllers/experiments"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/controllers/workers"
 )
 
 type Controller struct {

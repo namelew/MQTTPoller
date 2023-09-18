@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/data/models"
-	"github.com/namelew/mqtt-bm-latency/packages/logs"
-	"github.com/namelew/mqtt-bm-latency/packages/utils"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/data/models"
+	"github.com/namelew/mqtt-poller/core/packages/logs"
+	"github.com/namelew/mqtt-poller/core/packages/utils"
 	"github.com/tidwall/btree"
 	"golang.org/x/exp/constraints"
 )

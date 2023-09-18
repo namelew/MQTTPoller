@@ -6,10 +6,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/network"
-	"github.com/namelew/mqtt-bm-latency/internal/orquestrator/router"
-	"github.com/namelew/mqtt-bm-latency/packages/logs"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/network"
+	"github.com/namelew/mqtt-poller/core/internal/orquestrator/router"
+	"github.com/namelew/mqtt-poller/core/packages/logs"
 )
 
 func main() {

@@ -14,10 +14,10 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
-	"github.com/namelew/mqtt-bm-latency/internal/worker/history"
-	"github.com/namelew/mqtt-bm-latency/packages/logs"
-	"github.com/namelew/mqtt-bm-latency/packages/messages"
-	"github.com/namelew/mqtt-bm-latency/packages/utils"
+	"github.com/namelew/mqtt-poller/core/internal/worker/history"
+	"github.com/namelew/mqtt-poller/core/packages/logs"
+	"github.com/namelew/mqtt-poller/core/packages/messages"
+	"github.com/namelew/mqtt-poller/core/packages/utils"
 )
 
 type Worker struct {

@@ -3,7 +3,7 @@ package history
 import (
 	"os"
 
-	"github.com/namelew/mqtt-bm-latency/packages/utils"
+	"github.com/namelew/mqtt-poller/core/packages/utils"
 )
 
 type OngoingExperiments struct {
