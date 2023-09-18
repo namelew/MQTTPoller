@@ -36,17 +36,17 @@ export default function Navbar() {
       </Box>
 
       <Box display={{ base: "none", md: "flex" }} mt={{ base: 4, md: 0 }}>
-        <Button bg="transparent" border="1px">
+        <Button bg="transparent" border="1px" m={1}>
             <Link href="/orquestrators" rel="noopener noreferrer">
                 Orquestradores
             </Link>
         </Button>
-        <Button bg="transparent" border="1px">
+        <Button bg="transparent" border="1px" m={1}>
             <Link href="/experiments" rel="noopener noreferrer">
                 Experimentos
             </Link>
         </Button>
-        <Button bg="transparent" border="1px">
+        <Button bg="transparent" border="1px" m={1}>
             <Link href="/about" rel="noopener noreferrer">
                 Sobre
             </Link>
