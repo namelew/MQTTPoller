@@ -33,3 +33,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# golang temp files and binaries
+*./go.mod
+*.csv
+*.config
+tools
+.vscode
+bin
+examples
+dump
+*.db-journal
+*.db
+*.data
+*.config
+*.conf
+*.bin
+*.log
+tmp/

@@ -4,7 +4,7 @@ WORKDIR /app
 COPY . .
 
 RUN apk update; apk add --no-cache curl unzip
-RUN go build -o bin/worker cmd/worker/main.go
+RUN go build -o bin/worker src/core/cmd/worker/main.go
 RUN mkdir tools; curl -OL https://github.com/dist-sys/mqttloader/releases/download/v0.8.6/mqttloader-0.8.6.zip; unzip ./mqttloader-0.8.6.zip -d /app/tools
 
 FROM alpine:3.17 as binary

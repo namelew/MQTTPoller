@@ -5,8 +5,8 @@ example:
 	docker compose logs -f
 build:
 	go mod tidy
-	go build -o bin/orquestrator cmd/orquestrator/main.go
-	go build -o bin/worker cmd/worker/main.go
+	go build -o bin/orquestrator src/core/cmd/orquestrator/main.go
+	go build -o bin/worker src/core/cmd/worker/main.go
 clean:
 	rm -rf bin
 	rm -f *.bin

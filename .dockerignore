@@ -1,4 +1,9 @@
 docker-compose*
+/node_modules
+/.pnp
+/.next/
+/out/
+.pnp.js
 Makefile
 images/
 .gitignore

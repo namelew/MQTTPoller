@@ -16,7 +16,6 @@ services:
     networks:
      - example_experiment_network
   orquestrator:
-    container_name: orquestrator
     build:
       context: ./
       dockerfile: ./images/orquestrator/Dockerfile
@@ -30,7 +29,6 @@ services:
     depends_on:
       - broker
   workers:
-    container_name: worker
     build:
       context: ./
       dockerfile: ./images/worker/Dockerfile
@@ -43,7 +41,6 @@ services:
     depends_on:
       - orquestrator
   workers-2:
-    container_name: worker-2
     build:
       context: ./
       dockerfile: ./images/worker/Dockerfile
@@ -56,7 +53,6 @@ services:
     depends_on:
       - workers
   workers-3:
-    container_name: worker-3
     build:
       context: ./
       dockerfile: ./images/worker/Dockerfile

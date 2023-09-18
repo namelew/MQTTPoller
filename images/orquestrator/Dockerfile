@@ -4,7 +4,7 @@ WORKDIR /app
 COPY . /app/
 
 RUN apk update; apk add build-base
-RUN go build -o bin/orquestrator cmd/orquestrator/main.go
+RUN go build -o bin/orquestrator src/core/cmd/orquestrator/main.go
 
 FROM alpine:3.17 as binary
 
