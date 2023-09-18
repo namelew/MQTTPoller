@@ -1,14 +1,13 @@
 'use client'
 
 import { Container, Divider, Heading, Highlight, Text, Flex } from "@chakra-ui/react";
+import Article from "../components/article";
 
 const Homepage = () => {
     return (
         <>
             <Container>
-                <Heading>Sobre o Projeto</Heading>
-                <Divider />
-                <Flex textAlign='justify' flexDirection='column' padding={1}>
+                <Article title={ { text: 'Sobre o Projeto' } }>
                     <Text margin={1}>
                         Esse projeto surgiu a partir de um projeto de iniciação científica chamado 
                         Avaliação da escalabilidade do protocolo MQTT no contexto da Internet das Coisas, financiado pela UFFS,
@@ -27,15 +26,17 @@ const Homepage = () => {
                         quantidade de parâmetros editáveis, entre todas as estudadas. Assim, esse projeto busca facilitar a criação de experimentos com o MQTTLoader
                         e a coleta de resultados, oferecendo um sistema de coleta, poller, e uma interface gráfica que permitam um melhor gerenciamento dos experimentos.
                     </Text>
-                </Flex>
+                </Article>
             </Container>
             <Container>
-                <Heading>Sobre a Instituição</Heading>
-                <Divider />
+                <Article title={ {text: 'Sobre a Instituição'} }>
+
+                </Article>
             </Container>
             <Container>
-                <Heading>Como Contribuir</Heading>
-                <Divider />
+                <Article title={ {text: 'Como Contribuir'} }>
+                    
+                </Article>
             </Container>
         </>
     );
