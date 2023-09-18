@@ -492,11 +492,22 @@ func Init(broker string, tool string, loginTimeout, loginThreshold int) {
 		case "start":
 			go worker.Start(commd, string(m.Payload()), -1)
 		case "cancel":
+			expid, ok := commd.Arguments["id"].(float64)
+
+			if !ok {
+				log.Register("Unabel to read experiment id from orquestrator")
+			}
+
 			experimentListMutex.Lock()
-			node := experimentList.Search(int64(commd.Arguments["id"].(float64)))
+
+			node := experimentList.Search(int64(expid))
+
 			if node != nil {
+				log.Register(fmt.Sprintf("Canceling experiment %d", int64(expid)))
 				node.Finished = true
 				node.Proc.Kill()
+			} else {
+				log.Register(fmt.Sprintf("Unable to find experiment %d, cancel operation fail", int64(expid)))
 			}
 			experimentListMutex.Unlock()
 		}
