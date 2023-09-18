@@ -1,9 +1,9 @@
 'use client'
-import { Text, Heading, Divider, Container, Box, Flex  } from '@chakra-ui/react';
+import { Text, Heading, Divider, Container, Flex  } from '@chakra-ui/react';
 
 export default function Home() {
   return (
-    <Box w='100%' height='100%' p={10}>
+    <>
       <Container p={1} centerContent>
         <Heading size='3xl' as='h1' noOfLines={1}>Bem Vindo</Heading>
         <Divider />
@@ -33,6 +33,6 @@ export default function Home() {
           </Text>
         </Flex>
       </Container>
-    </Box>  
+    </>  
   );
 };
