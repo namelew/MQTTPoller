@@ -1,8 +1,6 @@
 import { IWorker } from "../interfaces/IWorker";
-import WorkersTable from "./table";
 import { api } from "../_consumer";
-import ExperimentSubmission from "./submition";
-import { AxiosError } from "axios";
+import WorkersTable from "./table";
 
 const Homepage = async () => {
     let workers:IWorker[] | undefined = undefined;
@@ -20,7 +18,6 @@ const Homepage = async () => {
 
     return (
         <>
-            <ExperimentSubmission />
             <WorkersTable workers={workers}/>
         </>
     );

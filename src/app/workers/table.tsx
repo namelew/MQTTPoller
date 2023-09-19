@@ -1,7 +1,8 @@
 'use client'
-import { Table, Thead, Tbody, Tr, Th, Td, Checkbox, Button, Flex } from "@chakra-ui/react";
+import { Button, Flex, Table, Tr, Th, Thead, Tbody, Checkbox} from "@chakra-ui/react";
 import { useState } from "react";
 import { IWorker } from "../interfaces/IWorker";
+import Workers from "./data";
 
 interface Props {
     workers?:IWorker[],
@@ -30,9 +31,16 @@ const WorkersTable = ( { workers } : Props) => {
         }
     };
 
+    const startExperiment = () => {
+
+    };
+
     return (
         <>
-            <Table variant="simple">
+            <Flex justifyContent={'flex-end'}>
+                <Button onClick={() => startExperiment()}>Iniciar Experimento</Button>
+            </Flex>
+            <Table variant='simple'>
                 <Thead>
                     <Tr>
                     <Th>
@@ -43,22 +51,15 @@ const WorkersTable = ( { workers } : Props) => {
                     </Tr>
                 </Thead>
                 <Tbody>
-                    {workers?.map((worker) => (
-                    <Tr key={worker.id}>
-                        <Td>
-                        <Checkbox
-                            isChecked={selectedWorkers.includes(worker.id)}
-                            onChange={() => handleSelectRow(worker.id)}
-                        />
-                        </Td>
-                        <Td>{worker.id}</Td>
-                        <Td>{worker.online ? 'Online' : 'Offline'}</Td>
-                    </Tr>
-                    ))}
+                    <Workers 
+                        workers={workers}
+                        selectWorkers={setSelectedWorkers}
+                        selectedWorkers={selectedWorkers}
+                    />
                 </Tbody>
             </Table>
         </>
     );
-}
+};
 
 export default WorkersTable;
