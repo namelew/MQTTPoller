@@ -30,15 +30,8 @@ const WorkersTable = ( { workers } : Props) => {
         }
     };
 
-    const startExperiment = () => {
-
-    };
-
     return (
         <>
-            <Flex justifyContent={'flex-end'}>
-                <Button onClick={() => startExperiment()}>Iniciar Experimento</Button>
-            </Flex>
             <Table variant="simple">
                 <Thead>
                     <Tr>
