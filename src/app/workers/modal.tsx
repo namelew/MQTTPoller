@@ -15,29 +15,69 @@ interface Props {
 }
 
 const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
-    const [formValues, setFormValues] = useState<IRequest>();
+    const [formValues, setFormValues] = useState<IRequest>(
+        {
+            description: {
+                tool: "mqtt-loader",
+                broker: "",
+                port:  0,
+                mqttVersion:  3,
+                numPublishers:  0,
+                numSubscribers:  0,
+                qosPublisher:  0,
+                qosSubscriber:  0,
+                sharedSubscription:  false,
+                retain:  false,
+                topic:  "",
+                payload:  0,
+                numMessages:  0,
+                ramUp:  0,
+                rampDown:  0,
+                interval:  0,
+                subscriberTimeout: 0,
+                execTime: 0,
+                logLevel: "INFO",
+                ntp: "",
+                output: true,
+                username: "",
+                password: "",
+                tlsTruststore: "",
+                tlsTruststorePass: "",
+                tlsKeystore: "",
+                tlsKeystorePass: ""
+            }
+        }
+    );
 
     useEffect(() => {
         if (selected) {
-            setFormValues( (prevValues) => ( prevValues ?
-                {
-                    id: selected,
-                    attempts: 0,
-                    description: {
-                        ...prevValues.description, tool: "mqtt-loader"
-                    }
-                } : prevValues));
+            setFormValues((prevValues) => ({
+                id: selected,
+                description: {
+                    ...prevValues?.description,
+                    tool: "mqttloader"
+                }
+            }));
         }
     }, [selected]);
 
-    const handleChange = (event:React.FormEvent<HTMLInputElement> | React.FormEvent<HTMLSelectElement>) => {
+    const handlerSelectChange = (event: React.FormEvent<HTMLSelectElement>) => {
         const { name, value } = event.currentTarget;
+        setFormValues((prevValues) => ( prevValues ?
+            {
+                ...prevValues,
+                description: { ...prevValues.description, [name]: +value }
+            } : prevValues));
+    }
+
+    const handleChange = (event:React.FormEvent<HTMLInputElement>) => {
+        const { name, value } = event.currentTarget;
+
         setFormValues((prevValues) => ( prevValues ?
             {
                 ...prevValues,
                 description: { ...prevValues.description, [name]: value }
             } : prevValues));
-        console.log(formValues);
     };
 
     return (
@@ -66,7 +106,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     label="Versão do Protocolo"
                                     name="mqttVersion"
                                     value={formValues?.description.mqttVersion}
-                                    onChange={handleChange}
+                                    onChange={handlerSelectChange}
                                     options={mqttVersions}
                                 />
                             </HStack>
@@ -122,7 +162,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     label="QoS Publicações"
                                     name="qosPublisher"
                                     value={formValues?.description.qosPublisher}
-                                    onChange={handleChange}
+                                    onChange={handlerSelectChange}
                                     options={QoS}
                                 />
                             </HStack>
@@ -143,7 +183,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     label="QoS Assinaturas"
                                     name="qosSubscriber"
                                     value={formValues?.description.qosSubscriber}
-                                    onChange={handleChange}
+                                    onChange={handlerSelectChange}
                                     options={QoS}
                                 />
                             </HStack>
@@ -170,7 +210,8 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                             <Checkbox
                                 label="Utilizar Assinatura Compatilhada?"
                                 name="sharedSubscription"
-                                isChecked={formValues?.description.sharedSubscription && formValues.description.mqttVersion === 5}
+                                isChecked={formValues?.description.sharedSubscription}
+                                disabled={formValues?.description.mqttVersion !== 5}
                                 onChange={handleChange}
                             />
                             <Checkbox

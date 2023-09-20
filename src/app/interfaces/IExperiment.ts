@@ -1,6 +1,6 @@
 export interface IRequest {
-    id: string[],
-    attempts: number,
+    id?: string[],
+    attempts?: number,
     description: {
         tool: string,
         broker: string,
