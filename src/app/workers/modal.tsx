@@ -1,7 +1,10 @@
 'use client'
-import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, Input, FormControl, FormLabel, Checkbox, Flex } from "@chakra-ui/react";
+import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, FormControl, Stack } from "@chakra-ui/react";
 import { useEffect, useState } from 'react';
 import { IRequest } from '../interfaces/IExperiment';
+import TextArea from "./inputs/textarea";
+import Number from "./inputs/number";
+import Checkbox from "./inputs/checkbox";
 
 interface Props {
     openModal: boolean,
@@ -35,7 +38,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
     };
 
     return (
-        <Modal isOpen={openModal} onClose={onClose}>
+        <Modal isOpen={openModal} onClose={onClose} size='3xl'>
             <ModalOverlay />
             <ModalContent>
                 <ModalHeader>Parâmetros do Experimento</ModalHeader>
@@ -43,146 +46,139 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                 <ModalBody>
                     <form>
                         <FormControl>
-                            <FormLabel>Endereço do Broker</FormLabel>
-                            <Input type="text" name="broker" value={formValues?.description.broker} onChange={handleChange} />
-                            <FormLabel>Porta</FormLabel>
-                            <Input type='number' name="port" value={formValues?.description.port} onChange={handleChange} />
-                            <FormLabel>Versão do Protocolo</FormLabel>
-                            <Input 
-                                type='number'
-                                name="mqttVersion"
-                                value={formValues?.description.mqttVersion}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Tópico</FormLabel>
-                            <Input 
-                                type='text'
-                                name="topic"
-                                value={formValues?.description.topic}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Endereço Servidor NTP</FormLabel>
-                            <Input 
-                                type='text'
-                                name="ntp"
-                                value={formValues?.description.ntp}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Usuário</FormLabel>
-                            <Input 
-                                type='text'
-                                name="username"
-                                value={formValues?.description.username}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Senha</FormLabel>
-                            <Input 
-                                type='text'
-                                name="password"
-                                value={formValues?.description.password}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Número de Mensagens Publicadas (Por Cliente) </FormLabel>
-                            <Input 
-                                type='number'
-                                name="numMessages"
-                                value={formValues?.description.numMessages}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Tamanho das Mensagens (Em Bytes) </FormLabel>
-                            <Input 
-                                type='number'
-                                name="payload"
-                                value={formValues?.description.payload}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Intervalo entra as Mensagens (Em Segundos) </FormLabel>
-                            <Input 
-                                type='number'
-                                name="interval"
-                                value={formValues?.description.interval}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Número de Assinantes</FormLabel>
-                            <Input 
-                                type='number'
-                                name="numSubscribers"
-                                value={formValues?.description.numSubscribers}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Número de Publicadores</FormLabel>
-                            <Input 
-                                type='number'
-                                name="numPublishers"
-                                value={formValues?.description.numPublishers}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>QoS das Assinaturas</FormLabel>
-                            <Input 
-                                type='number'
-                                name="qosSubscriber"
-                                value={formValues?.description.qosSubscriber}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>QoS das Publicações</FormLabel>
-                            <Input 
-                                type='number'
-                                name="qosPublisher"
-                                value={formValues?.description.qosPublisher}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Tempo de Execução (Segundos)</FormLabel>
-                            <Input 
-                                type='number'
-                                name="execTime"
-                                value={formValues?.description.execTime}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Timeout de Assinatura (Segundos)</FormLabel>
-                            <Input 
-                                type='number'
-                                name="subscriberTimeout"
-                                value={formValues?.description.subscriberTimeout}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Tempo de Partida</FormLabel>
-                            <Input 
-                                type='number'
-                                name="ramUp"
-                                value={formValues?.description.ramUp}
-                                onChange={handleChange}
-                            />
-                            <FormLabel>Tempo de Finalização</FormLabel>
-                            <Input 
-                                type='number'
-                                name="rampDown"
-                                value={formValues?.description.rampDown}
-                                onChange={handleChange}
-                            />
-                            <Flex>
-                                <FormLabel>Utilizar Assinatura Compatilhada?</FormLabel>
-                                <Checkbox
-                                    name="sharedSubscription"
-                                    isChecked={formValues?.description.sharedSubscription}
+                            <Stack direction="row" align="center" justify="space-between">
+                                <TextArea
+                                    label="Endereço do Broker"
+                                    name="broker"
+                                    value={formValues?.description.broker}
                                     onChange={handleChange}
                                 />
-                            </Flex>
-                            <Flex>
-                                <FormLabel>Retenção?</FormLabel>
-                                <Checkbox
-                                    name="sharedSubscription"
-                                    isChecked={formValues?.description.sharedSubscription}
+                                <Number
+                                    label="Porta"
+                                    name="port"
+                                    value={formValues?.description.port}
                                     onChange={handleChange}
                                 />
-                            </Flex>
-                            <Flex>
-                                <FormLabel>Gerar arquivo de log?</FormLabel>
-                                <Checkbox
-                                    name="output"
-                                    isChecked={formValues?.description.output}
+                                <Number
+                                    label="Versão do Protocolo"
+                                    name="mqttVersion"
+                                    value={formValues?.description.mqttVersion}
                                     onChange={handleChange}
                                 />
-                            </Flex>
+                            </Stack>
+                            <Stack direction="row" align="center" justify="space-between">
+                                <TextArea
+                                    label="Endereço Servidor NTP"
+                                    name="ntp"
+                                    value={formValues?.description.ntp}
+                                    onChange={handleChange}
+                                />
+                                <TextArea
+                                    label="Usuário"
+                                    name="username"
+                                    value={formValues?.description.username}
+                                    onChange={handleChange}
+                                />
+                                <TextArea
+                                    label="Senha"
+                                    name="password"
+                                    value={formValues?.description.password}
+                                    onChange={handleChange}
+                                />
+                            </Stack>
+                            <Stack direction="row" align="center" justify="space-between">
+                                <Number
+                                    label="Número de Mensagens Publicadas"
+                                    name="numMessages"
+                                    value={formValues?.description.numMessages}
+                                    onChange={handleChange}
+                                />
+                                <Number
+                                    label="Tamanho das Mensagens"
+                                    name="payload"
+                                    value={formValues?.description.payload}
+                                    onChange={handleChange}
+                                />
+                                <Number
+                                    label="Intervalo entra as Mensagens"
+                                    name="interval"
+                                    value={formValues?.description.interval}
+                                    onChange={handleChange}
+                                />
+                            </Stack>
+                            <Stack direction="row" align="center" justify="space-between">
+                                <TextArea label="Tópico" name="topic" value={formValues?.description.topic} onChange={handleChange}/>
+                                <Number
+                                    label="N. Publicadores"
+                                    name="numPublishers"
+                                    value={formValues?.description.numPublishers}
+                                    onChange={handleChange}
+                                />
+                                <Number
+                                    label="QoS Publicações"
+                                    name="qosPublisher"
+                                    value={formValues?.description.qosPublisher}
+                                    onChange={handleChange}
+                                />
+                            </Stack>
+                            <Stack direction="row" align="center" justify="space-between">
+                                <Number
+                                    label="N. Assinantes"
+                                    name="numSubscribers"
+                                    value={formValues?.description.numSubscribers}
+                                    onChange={handleChange}
+                                />
+                                <Number
+                                    label="QoS Assinaturas"
+                                    name="qosSubscriber"
+                                    value={formValues?.description.qosSubscriber}
+                                    onChange={handleChange}
+                                />
+                                <Number
+                                    label="Timeout Assinatura"
+                                    name="subscriberTimeout"
+                                    value={formValues?.description.subscriberTimeout}
+                                    onChange={handleChange}
+                                />
+                            </Stack>
+                            <Stack direction="row" align="center" justify="space-between">
+                                <Number 
+                                    label='Tempo de Execução'
+                                    name="execTime"
+                                    value={formValues?.description.execTime}
+                                    onChange={handleChange}
+                                />
+                                <Number 
+                                    label='Tempo de Partida'
+                                    name="ramUp"
+                                    value={formValues?.description.ramUp}
+                                    onChange={handleChange}
+                                />
+                                <Number 
+                                    label='Tempo de Finalização'
+                                    name="rampDown"
+                                    value={formValues?.description.rampDown}
+                                    onChange={handleChange}
+                                />
+                            </Stack>
+                            <Checkbox
+                                label="Utilizar Assinatura Compatilhada?"
+                                name="sharedSubscription"
+                                isChecked={formValues?.description.sharedSubscription}
+                                onChange={handleChange}
+                            />
+                            <Checkbox
+                                label="Retenção?"
+                                name="retain"
+                                isChecked={formValues?.description.retain}
+                                onChange={handleChange}
+                            />
+                            <Checkbox
+                                label="Gerar arquivo de log?"
+                                name="output"
+                                isChecked={formValues?.description.output}
+                                onChange={handleChange}
+                            />
                         </FormControl>
                     </form>
                 </ModalBody>
