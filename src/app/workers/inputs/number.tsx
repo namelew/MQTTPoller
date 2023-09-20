@@ -6,7 +6,7 @@ interface Props {
     label?: string
     name?: string,
     value?: number,
-    onChange?: (event: React.FormEvent<HTMLInputElement>) => void
+    onChange?: (event:React.FormEvent<any>) => void
 }
 
 const Number = ( { label, value, name, onChange } : Props) => {

@@ -1,10 +1,11 @@
 'use client'
-import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, FormControl, Stack } from "@chakra-ui/react";
+import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, FormControl } from "@chakra-ui/react";
 import { useEffect, useState } from 'react';
 import { IRequest } from '../interfaces/IExperiment';
 import TextArea from "./inputs/textarea";
 import Number from "./inputs/number";
 import Checkbox from "./inputs/checkbox";
+import DropDown from "./inputs/dropdown";
 
 interface Props {
     openModal: boolean,
@@ -14,6 +15,35 @@ interface Props {
 
 const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
     const [formValues, setFormValues] = useState<IRequest>();
+    const mqttVersions = [
+        {
+          key: "v3.1",
+          name: "v3.1",
+          value: 3  
+        },
+        {
+            key: "v5",
+            name: "v5",
+            value: 5
+        }
+    ]
+    const QoS = [
+        {
+            key: "QoS 0",
+            name: "Melhor Esforço (QoS 0)",
+            value: 0
+        },
+        {
+            key: "QoS 1",
+            name: "Pelo menos um (QoS 1)",
+            value: 1
+        },
+        {
+            key: "QoS 2",
+            name: "Exatamente um (QoS 2)",
+            value: 2
+        }
+    ]
 
     useEffect(() => {
         if (selected) {
@@ -28,7 +58,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
         }
     }, [selected]);
 
-    const handleChange = (event:React.FormEvent<HTMLInputElement>) => {
+    const handleChange = (event:React.FormEvent<HTMLInputElement> | React.FormEvent<HTMLSelectElement>) => {
         const { name, value } = event.currentTarget;
         setFormValues((prevValues) => ( prevValues ?
             {
@@ -46,7 +76,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                 <ModalBody>
                     <form>
                         <FormControl>
-                            <Stack direction="row" align="center" justify="space-between">
+                            <HStack justifyContent="space-between" width="100%">
                                 <TextArea
                                     label="Endereço do Broker"
                                     name="broker"
@@ -59,14 +89,15 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     value={formValues?.description.port}
                                     onChange={handleChange}
                                 />
-                                <Number
+                                <DropDown
                                     label="Versão do Protocolo"
                                     name="mqttVersion"
                                     value={formValues?.description.mqttVersion}
                                     onChange={handleChange}
+                                    options={mqttVersions}
                                 />
-                            </Stack>
-                            <Stack direction="row" align="center" justify="space-between">
+                            </HStack>
+                            <HStack justifyContent="space-between" width="100%">
                                 <TextArea
                                     label="Endereço Servidor NTP"
                                     name="ntp"
@@ -85,8 +116,8 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     value={formValues?.description.password}
                                     onChange={handleChange}
                                 />
-                            </Stack>
-                            <Stack direction="row" align="center" justify="space-between">
+                            </HStack>
+                            <HStack justifyContent="space-between" width="100%">
                                 <Number
                                     label="Número de Mensagens Publicadas"
                                     name="numMessages"
@@ -105,8 +136,8 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     value={formValues?.description.interval}
                                     onChange={handleChange}
                                 />
-                            </Stack>
-                            <Stack direction="row" align="center" justify="space-between">
+                            </HStack>
+                            <HStack justifyContent="space-between" width="100%">
                                 <TextArea label="Tópico" name="topic" value={formValues?.description.topic} onChange={handleChange}/>
                                 <Number
                                     label="N. Publicadores"
@@ -114,24 +145,19 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     value={formValues?.description.numPublishers}
                                     onChange={handleChange}
                                 />
-                                <Number
+                                <DropDown
                                     label="QoS Publicações"
                                     name="qosPublisher"
                                     value={formValues?.description.qosPublisher}
                                     onChange={handleChange}
+                                    options={QoS}
                                 />
-                            </Stack>
-                            <Stack direction="row" align="center" justify="space-between">
+                            </HStack>
+                            <HStack justifyContent="space-between" width="100%">
                                 <Number
                                     label="N. Assinantes"
                                     name="numSubscribers"
                                     value={formValues?.description.numSubscribers}
-                                    onChange={handleChange}
-                                />
-                                <Number
-                                    label="QoS Assinaturas"
-                                    name="qosSubscriber"
-                                    value={formValues?.description.qosSubscriber}
                                     onChange={handleChange}
                                 />
                                 <Number
@@ -140,8 +166,15 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     value={formValues?.description.subscriberTimeout}
                                     onChange={handleChange}
                                 />
-                            </Stack>
-                            <Stack direction="row" align="center" justify="space-between">
+                                <DropDown
+                                    label="QoS Assinaturas"
+                                    name="qosSubscriber"
+                                    value={formValues?.description.qosSubscriber}
+                                    onChange={handleChange}
+                                    options={QoS}
+                                />
+                            </HStack>
+                            <HStack justifyContent="space-between" width="100%">
                                 <Number 
                                     label='Tempo de Execução'
                                     name="execTime"
@@ -160,7 +193,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     value={formValues?.description.rampDown}
                                     onChange={handleChange}
                                 />
-                            </Stack>
+                            </HStack>
                             <Checkbox
                                 label="Utilizar Assinatura Compatilhada?"
                                 name="sharedSubscription"

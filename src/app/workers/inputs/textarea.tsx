@@ -7,7 +7,7 @@ interface Props {
     name?: string,
     value?: string,
     type?: 'url' | 'text',
-    onChange?: (event: React.FormEvent<HTMLInputElement>) => void
+    onChange?: (event: React.FormEvent<any>) => void
 }
 
 const TextArea = ( { label, type = 'text', value ,name, onChange } : Props) => {

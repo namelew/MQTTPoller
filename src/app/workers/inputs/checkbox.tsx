@@ -5,7 +5,7 @@ interface Props {
     label?: string
     name?: string,
     isChecked?:boolean
-    onChange?: (event: React.FormEvent<HTMLInputElement>) => void
+    onChange?: (event:React.FormEvent<any>) => void
 }
 
 const Checkbox = ( { label, name, isChecked, onChange } : Props) => {
