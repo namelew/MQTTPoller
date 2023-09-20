@@ -11,9 +11,14 @@ interface Props {
 
 const Number = ( { label, value, name, onChange } : Props) => {
     return (
-        <Box>
+        <Box maxW='md' minW='3xs'>
             {label && <FormLabel>{label}</FormLabel>}
-            <Input type='number' value={value} name={name} onChange={onChange} />
+            <Input 
+                type='number'
+                value={value}
+                name={name}
+                onChange={onChange}
+            />
         </Box>
     );
 };

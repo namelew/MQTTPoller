@@ -17,7 +17,7 @@ interface Props {
 
 const DropDown = ({ label, name, value, onChange, options } : Props) => {
     return (
-        <Box>
+        <Box minW='3xs'>
             {label && <FormLabel>{label}</FormLabel>}
             <Select name={name} value={value} onClick={onChange}>
                 {options.map((option) => (

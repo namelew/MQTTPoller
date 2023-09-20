@@ -1,6 +1,7 @@
 'use client'
 import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, FormControl } from "@chakra-ui/react";
 import { useEffect, useState } from 'react';
+import { mqttVersions, QoS } from "./static";
 import { IRequest } from '../interfaces/IExperiment';
 import TextArea from "./inputs/textarea";
 import Number from "./inputs/number";
@@ -15,35 +16,6 @@ interface Props {
 
 const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
     const [formValues, setFormValues] = useState<IRequest>();
-    const mqttVersions = [
-        {
-          key: "v3.1",
-          name: "v3.1",
-          value: 3  
-        },
-        {
-            key: "v5",
-            name: "v5",
-            value: 5
-        }
-    ]
-    const QoS = [
-        {
-            key: "QoS 0",
-            name: "Melhor Esforço (QoS 0)",
-            value: 0
-        },
-        {
-            key: "QoS 1",
-            name: "Pelo menos um (QoS 1)",
-            value: 1
-        },
-        {
-            key: "QoS 2",
-            name: "Exatamente um (QoS 2)",
-            value: 2
-        }
-    ]
 
     useEffect(() => {
         if (selected) {
@@ -65,6 +37,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                 ...prevValues,
                 description: { ...prevValues.description, [name]: value }
             } : prevValues));
+        console.log(formValues);
     };
 
     return (
@@ -78,7 +51,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                         <FormControl>
                             <HStack justifyContent="space-between" width="100%">
                                 <TextArea
-                                    label="Endereço do Broker"
+                                    label="Endereço Broker"
                                     name="broker"
                                     value={formValues?.description.broker}
                                     onChange={handleChange}
@@ -119,7 +92,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                             </HStack>
                             <HStack justifyContent="space-between" width="100%">
                                 <Number
-                                    label="Número de Mensagens Publicadas"
+                                    label="N. Mensagens Publicadas"
                                     name="numMessages"
                                     value={formValues?.description.numMessages}
                                     onChange={handleChange}
@@ -131,7 +104,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     onChange={handleChange}
                                 />
                                 <Number
-                                    label="Intervalo entra as Mensagens"
+                                    label="Intervalo entra Mensagens"
                                     name="interval"
                                     value={formValues?.description.interval}
                                     onChange={handleChange}
@@ -197,7 +170,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                             <Checkbox
                                 label="Utilizar Assinatura Compatilhada?"
                                 name="sharedSubscription"
-                                isChecked={formValues?.description.sharedSubscription}
+                                isChecked={formValues?.description.sharedSubscription && formValues.description.mqttVersion === 5}
                                 onChange={handleChange}
                             />
                             <Checkbox

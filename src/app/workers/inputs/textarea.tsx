@@ -12,7 +12,7 @@ interface Props {
 
 const TextArea = ( { label, type = 'text', value ,name, onChange } : Props) => {
     return (
-        <Box>
+        <Box minW='3xs'>
             {label && <FormLabel>{label}</FormLabel>}
             <Input type={type} value={value} name={name} onChange={onChange} />
         </Box>
