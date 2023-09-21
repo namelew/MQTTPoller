@@ -2,11 +2,12 @@
 import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, FormControl } from "@chakra-ui/react";
 import { useEffect, useState } from 'react';
 import { mqttVersions, QoS } from "./static";
-import { IRequest } from '../interfaces/IExperiment';
+import { IRequest, IResult } from '../interfaces/IExperiment';
 import TextArea from "./inputs/textarea";
 import Number from "./inputs/number";
 import Checkbox from "./inputs/checkbox";
 import DropDown from "./inputs/dropdown";
+import { api } from "../consumers/client";
 
 interface Props {
     openModal: boolean,
@@ -79,6 +80,15 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                 description: { ...prevValues.description, [name]: value }
             } : prevValues));
     };
+
+    const startExperiment = () => {
+        api.post<IResult>("/experiment/start", formValues)
+            .then((response) => {
+                console.log(response.data);
+            })
+            .catch((error) => alert(error));
+        onClose();
+    }
 
     return (
         <Modal isOpen={openModal} onClose={onClose} size='3xl'>
@@ -234,7 +244,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                         <Button colorScheme="blue" mr={3} onClick={onClose}>
                             Fechar
                         </Button>
-                        <Button colorScheme="green" mr={3} onClick={onClose}>
+                        <Button colorScheme="green" mr={3} onClick={startExperiment}>
                             Iniciar
                         </Button>
                     </HStack>
