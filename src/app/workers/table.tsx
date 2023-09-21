@@ -4,6 +4,7 @@ import { useState } from "react";
 import { IWorker } from "interfaces/IWorker";
 import Workers from "./data";
 import ExperimentModal from "./modal";
+import { useQuery } from "@tanstack/react-query";
 
 interface Props {
     workers?:IWorker[],
@@ -12,7 +13,24 @@ interface Props {
 const WorkersTable = ( { workers } : Props) => {
     const [selectAll, setSelectAll] = useState(false);
     const [openExperimentModal, setOpenExperimentModal] = useState(false);
+    const [fetchError, setFetchError] = useState<Error>();
     const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
+
+    const { data, isLoading } = useQuery<IWorker[]>({
+        queryKey: ['worker'],
+        queryFn: () => fetch('/api/worker').then(res => res.json()).catch((error) => {
+            setFetchError(error);
+            return [];
+        }),
+    });
+
+    if (!isLoading && data && !fetchError && data !== workers) {
+        workers = data
+    }
+
+    if (fetchError) {
+        console.log(fetchError);
+    }
 
     const handleSelectAll = () => {
         if (workers) {
