@@ -260,15 +260,15 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                             </HStack>
                             <HStack justifyContent="space-between" width="100%">
                                 <Number
-                                    label="N. Assinantes"
-                                    name="numSubscribers"
-                                    value={formValues?.description.numSubscribers}
-                                    onChange={handleChangeNumber}
-                                />
-                                <Number
                                     label="Timeout Assinatura"
                                     name="subscriberTimeout"
                                     value={formValues?.description.subscriberTimeout}
+                                    onChange={handleChangeNumber}
+                                />
+                                <Number
+                                    label="N. Assinantes"
+                                    name="numSubscribers"
+                                    value={formValues?.description.numSubscribers}
                                     onChange={handleChangeNumber}
                                 />
                                 <DropDown
