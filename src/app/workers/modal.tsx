@@ -90,13 +90,31 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
     };
 
     const handleChangeBool = (event:React.FormEvent<HTMLInputElement>) => {
-        const { name, value } = event.currentTarget;
+        const { name } = event.currentTarget;
 
-        setFormValues((prevValues) => ( prevValues ?
-            {
-                ...prevValues,
-                description: { ...prevValues.description, [name]: (value === "true") }
-            } : prevValues));
+        switch (name) {
+            case "sharedSubscription":
+                setFormValues((prevValues) => ( prevValues ?
+                    {
+                        ...prevValues,
+                        description: { ...prevValues.description, sharedSubscription: !prevValues.description.sharedSubscription }
+                    } : prevValues));
+                break;
+            case "retain":
+                setFormValues((prevValues) => ( prevValues ?
+                    {
+                        ...prevValues,
+                        description: { ...prevValues.description, retain: !prevValues.description.retain }
+                    } : prevValues));
+                break;
+            case "output":
+                setFormValues((prevValues) => ( prevValues ?
+                    {
+                        ...prevValues,
+                        description: { ...prevValues.description, output: !prevValues.description.output }
+                    } : prevValues));
+                break;
+        }
     };
 
     const handleChangeString = (event:React.FormEvent<HTMLInputElement>) => {

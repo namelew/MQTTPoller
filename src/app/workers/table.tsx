@@ -22,6 +22,9 @@ const WorkersTable = ( { workers } : Props) => {
             setFetchError(error);
             return [];
         }),
+        retry: 3,
+        refetchInterval: 60000,
+        initialData: workers,
     });
 
     if (!isLoading && data && !fetchError && data !== workers) {
