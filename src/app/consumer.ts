@@ -6,7 +6,7 @@ export const api = axios.create({
 });
 
 export const startExperiment = async (expParam: IRequest) : Promise<IResult[]> => {
-    const response = await api.post<IResult[]>("/experiment/start", expParam);
+    const response = await axios.post<IResult[]>("/api/experiment/start", expParam);
 
     if (response.status !== 200) {
         console.log(response.statusText);

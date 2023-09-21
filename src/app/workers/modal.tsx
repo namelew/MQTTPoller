@@ -2,12 +2,13 @@
 import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, FormControl } from "@chakra-ui/react";
 import { useEffect, useState } from 'react';
 import { mqttVersions, QoS } from "./static";
-import { IRequest, IResult } from 'interfaces/IExperiment';
+import { IRequest } from 'interfaces/IExperiment';
 import TextArea from "./inputs/textarea";
 import Number from "./inputs/number";
 import Checkbox from "./inputs/checkbox";
 import DropDown from "./inputs/dropdown";
-import { api } from "consumers/client";
+import { useMutation } from "@tanstack/react-query";
+import { startExperiment } from "consumer";
 
 interface Props {
     openModal: boolean,
@@ -16,8 +17,110 @@ interface Props {
 }
 
 const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
+    const submitMutation = useMutation(startExperiment, {
+        onSuccess: (result) => console.log(result),
+        onError: (error) => console.log(error)
+    });
+
     const [formValues, setFormValues] = useState<IRequest>(
         {
+            attempts: 0,
+            description: {
+                tool: "mqtt-loader",
+                broker: "",
+                port:  1883,
+                mqttVersion:  3,
+                numPublishers:  0,
+                numSubscribers:  0,
+                qosPublisher:  0,
+                qosSubscriber:  0,
+                sharedSubscription:  false,
+                retain:  false,
+                topic:  "",
+                payload:  0,
+                numMessages:  0,
+                ramUp:  0,
+                rampDown:  0,
+                interval:  0,
+                subscriberTimeout: 0,
+                execTime: 0,
+                logLevel: "INFO",
+                ntp: "",
+                output: false,
+                username: "",
+                password: "",
+                tlsTruststore: "",
+                tlsTruststorePass: "",
+                tlsKeystore: "",
+                tlsKeystorePass: ""
+            }
+        }
+    );
+
+    useEffect(() => {
+        if (selected) {
+            setFormValues((prevValues) => ({
+                id: selected,
+                attempts: 0,
+                description: {
+                    ...prevValues?.description,
+                    tool: "mqttloader"
+                }
+            }));
+        }
+    }, [selected]);
+
+    const handlerSelectChange = (event: React.FormEvent<HTMLSelectElement>) => {
+        const { name, value } = event.currentTarget;
+        setFormValues((prevValues) => ( prevValues ?
+            {
+                ...prevValues,
+                description: { ...prevValues.description, [name]: +value }
+            } : prevValues));
+    }
+
+    const handleChangeNumber = (event:React.FormEvent<HTMLInputElement>) => {
+        const { name, value } = event.currentTarget;
+
+        setFormValues((prevValues) => ( prevValues ?
+            {
+                ...prevValues,
+                description: { ...prevValues.description, [name]: +value }
+            } : prevValues));
+    };
+
+    const handleChangeBool = (event:React.FormEvent<HTMLInputElement>) => {
+        const { name, value } = event.currentTarget;
+
+        setFormValues((prevValues) => ( prevValues ?
+            {
+                ...prevValues,
+                description: { ...prevValues.description, [name]: (value === "true") }
+            } : prevValues));
+    };
+
+    const handleChangeString = (event:React.FormEvent<HTMLInputElement>) => {
+        const { name, value } = event.currentTarget;
+
+        setFormValues((prevValues) => ( prevValues ?
+            {
+                ...prevValues,
+                description: { ...prevValues.description, [name]: value }
+            } : prevValues));
+    };
+
+    const onSubmit = () => {
+        submitMutation.mutate(formValues, {
+            onSuccess: (response) => {
+                console.log(response);
+            },
+            onError: (error, variables, context) => {
+                console.log(error, variables, context);
+            }
+        });
+        setFormValues({
+            id: selected,
+            attempts: 0,
             description: {
                 tool: "mqtt-loader",
                 broker: "",
@@ -39,7 +142,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                 execTime: 0,
                 logLevel: "INFO",
                 ntp: "",
-                output: true,
+                output: false,
                 username: "",
                 password: "",
                 tlsTruststore: "",
@@ -47,46 +150,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                 tlsKeystore: "",
                 tlsKeystorePass: ""
             }
-        }
-    );
-
-    useEffect(() => {
-        if (selected) {
-            setFormValues((prevValues) => ({
-                id: selected,
-                description: {
-                    ...prevValues?.description,
-                    tool: "mqttloader"
-                }
-            }));
-        }
-    }, [selected]);
-
-    const handlerSelectChange = (event: React.FormEvent<HTMLSelectElement>) => {
-        const { name, value } = event.currentTarget;
-        setFormValues((prevValues) => ( prevValues ?
-            {
-                ...prevValues,
-                description: { ...prevValues.description, [name]: +value }
-            } : prevValues));
-    }
-
-    const handleChange = (event:React.FormEvent<HTMLInputElement>) => {
-        const { name, value } = event.currentTarget;
-
-        setFormValues((prevValues) => ( prevValues ?
-            {
-                ...prevValues,
-                description: { ...prevValues.description, [name]: value }
-            } : prevValues));
-    };
-
-    const startExperiment = () => {
-        api.post<IResult>("/experiment/start", formValues)
-            .then((response) => {
-                console.log(response.data);
-            })
-            .catch((error) => alert(error));
+        });
         onClose();
     }
 
@@ -104,13 +168,13 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     label="Endereço Broker"
                                     name="broker"
                                     value={formValues?.description.broker}
-                                    onChange={handleChange}
+                                    onChange={handleChangeString}
                                 />
                                 <Number
                                     label="Porta"
                                     name="port"
                                     value={formValues?.description.port}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                                 <DropDown
                                     label="Versão do Protocolo"
@@ -125,19 +189,19 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     label="Endereço Servidor NTP"
                                     name="ntp"
                                     value={formValues?.description.ntp}
-                                    onChange={handleChange}
+                                    onChange={handleChangeString}
                                 />
                                 <TextArea
                                     label="Usuário"
                                     name="username"
                                     value={formValues?.description.username}
-                                    onChange={handleChange}
+                                    onChange={handleChangeString}
                                 />
                                 <TextArea
                                     label="Senha"
                                     name="password"
                                     value={formValues?.description.password}
-                                    onChange={handleChange}
+                                    onChange={handleChangeString}
                                 />
                             </HStack>
                             <HStack justifyContent="space-between" width="100%">
@@ -145,28 +209,28 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     label="N. Mensagens Publicadas"
                                     name="numMessages"
                                     value={formValues?.description.numMessages}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                                 <Number
                                     label="Tamanho das Mensagens"
                                     name="payload"
                                     value={formValues?.description.payload}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                                 <Number
                                     label="Intervalo entra Mensagens"
                                     name="interval"
                                     value={formValues?.description.interval}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                             </HStack>
                             <HStack justifyContent="space-between" width="100%">
-                                <TextArea label="Tópico" name="topic" value={formValues?.description.topic} onChange={handleChange}/>
+                                <TextArea label="Tópico" name="topic" value={formValues?.description.topic} onChange={handleChangeString}/>
                                 <Number
                                     label="N. Publicadores"
                                     name="numPublishers"
                                     value={formValues?.description.numPublishers}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                                 <DropDown
                                     label="QoS Publicações"
@@ -181,13 +245,13 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     label="N. Assinantes"
                                     name="numSubscribers"
                                     value={formValues?.description.numSubscribers}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                                 <Number
                                     label="Timeout Assinatura"
                                     name="subscriberTimeout"
                                     value={formValues?.description.subscriberTimeout}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                                 <DropDown
                                     label="QoS Assinaturas"
@@ -202,19 +266,19 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                     label='Tempo de Execução'
                                     name="execTime"
                                     value={formValues?.description.execTime}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                                 <Number 
                                     label='Tempo de Partida'
                                     name="ramUp"
                                     value={formValues?.description.ramUp}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                                 <Number 
                                     label='Tempo de Finalização'
                                     name="rampDown"
                                     value={formValues?.description.rampDown}
-                                    onChange={handleChange}
+                                    onChange={handleChangeNumber}
                                 />
                             </HStack>
                             <Checkbox
@@ -222,19 +286,19 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                                 name="sharedSubscription"
                                 isChecked={formValues?.description.sharedSubscription}
                                 disabled={formValues?.description.mqttVersion !== 5}
-                                onChange={handleChange}
+                                onChange={handleChangeBool}
                             />
                             <Checkbox
                                 label="Retenção?"
                                 name="retain"
                                 isChecked={formValues?.description.retain}
-                                onChange={handleChange}
+                                onChange={handleChangeBool}
                             />
                             <Checkbox
                                 label="Gerar arquivo de log?"
                                 name="output"
                                 isChecked={formValues?.description.output}
-                                onChange={handleChange}
+                                onChange={handleChangeBool}
                             />
                         </FormControl>
                     </form>
@@ -244,7 +308,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                         <Button colorScheme="blue" mr={3} onClick={onClose}>
                             Fechar
                         </Button>
-                        <Button colorScheme="green" mr={3} onClick={startExperiment}>
+                        <Button colorScheme="green" mr={3} onClick={onSubmit}>
                             Iniciar
                         </Button>
                     </HStack>
