@@ -1,7 +1,7 @@
 import { Providers } from "./_providers"
-import AppDefault from "./components/default"
-import Footer from "./components/footer"
-import Navbar from "./components/navbar"
+import AppDefault from "components/default"
+import Footer from "components/footer"
+import Navbar from "components/navbar"
 
 export default function RootLayout({
   children,

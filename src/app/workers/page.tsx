@@ -1,5 +1,5 @@
-import { IWorker } from "../interfaces/IWorker";
-import { api } from "../consumers/server";
+import { IWorker } from "interfaces/IWorker";
+import { api } from "consumers/server";
 import WorkersTable from "./table";
 
 const Homepage = async () => {

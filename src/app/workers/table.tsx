@@ -1,7 +1,7 @@
 'use client'
 import { Button, Flex, Checkbox, Table, Tr, Th, Thead, Tbody } from "@chakra-ui/react";
 import { useState } from "react";
-import { IWorker } from "../interfaces/IWorker";
+import { IWorker } from "interfaces/IWorker";
 import Workers from "./data";
 import ExperimentModal from "./modal";
 

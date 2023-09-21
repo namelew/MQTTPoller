@@ -1,7 +1,7 @@
 'use client'
 
-import { Container, Divider, Heading, Highlight, Text, Flex } from "@chakra-ui/react";
-import Article from "../components/article";
+import { Container, Text } from "@chakra-ui/react";
+import Article from "components/article";
 
 const Homepage = () => {
     return (

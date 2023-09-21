@@ -2,12 +2,12 @@
 import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, FormControl } from "@chakra-ui/react";
 import { useEffect, useState } from 'react';
 import { mqttVersions, QoS } from "./static";
-import { IRequest, IResult } from '../interfaces/IExperiment';
+import { IRequest, IResult } from 'interfaces/IExperiment';
 import TextArea from "./inputs/textarea";
 import Number from "./inputs/number";
 import Checkbox from "./inputs/checkbox";
 import DropDown from "./inputs/dropdown";
-import { api } from "../consumers/client";
+import { api } from "consumers/client";
 
 interface Props {
     openModal: boolean,

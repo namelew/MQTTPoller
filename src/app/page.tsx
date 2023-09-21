@@ -1,6 +1,6 @@
 'use client'
 import { Text, Container } from '@chakra-ui/react';
-import Article from './components/article';
+import Article from 'components/article';
 
 export default function Home() {
   return (

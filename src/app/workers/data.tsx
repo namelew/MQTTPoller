@@ -1,6 +1,6 @@
 'use client'
 import { Tr, Td, Checkbox } from "@chakra-ui/react";
-import { IWorker } from "../interfaces/IWorker";
+import { IWorker } from "interfaces/IWorker";
 
 interface Props {
     workers?:IWorker[],
