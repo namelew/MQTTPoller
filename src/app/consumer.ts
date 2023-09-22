@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { IRequest, IResult } from 'interfaces/IExperiment';
 
 export const api = axios.create({
@@ -15,3 +15,12 @@ export const startExperiment = async (expParam: IRequest) : Promise<IResult[]> =
 
     return response.data;
 };
+
+export const deleteExperiment =async ( id: number ) : Promise<void> =>{
+    const response = await axios.delete(`/api/experiment/${id}`);
+    
+    if (response.status !== 200) {
+        console.log(response.statusText);
+        return;
+    }
+}

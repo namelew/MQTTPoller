@@ -1,5 +1,7 @@
 'use client'
-import { Tr, Td } from "@chakra-ui/react";
+import { Tr, Td, Button } from "@chakra-ui/react";
+import { useMutation } from "@tanstack/react-query";
+import { deleteExperiment } from "consumer";
 import { IExperiment } from "interfaces/IExperiment";
 import { mqttVersions } from "static";
 
@@ -8,6 +10,11 @@ interface Props {
 }
 
 const Experiments = ( { experiments } : Props) => {
+    const onDelete = useMutation(deleteExperiment, {
+        onSuccess: () => alert("Experimento excluido com sucesso"),
+        onError: (error) => console.log(error)
+    });
+
     return (
         <>
             {experiments?.map((experiment) => {
@@ -24,7 +31,11 @@ const Experiments = ( { experiments } : Props) => {
                         <Td>{experiment.finish ? 'Sim' : 'Não'}</Td>
                         <Td>{experiment.error !== '' ? 'Sim' : 'Não'}</Td>
                         <Td>Mais</Td>
-                        <Td>Excluir</Td>
+                        <Td>
+                            <Button colorScheme="red" size="md" variant="solid" onClick={() => onDelete.mutate(experiment.id)}>
+                                Deletar
+                            </Button>
+                        </Td>
                     </Tr>
                 )
             })}

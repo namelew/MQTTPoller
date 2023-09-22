@@ -17,7 +17,7 @@ const Homepage = () => {
                     <Text margin={1}>
                         Um grande problema das ferramentas estudas era a dificuldade de gerar experimentos com clientes hospedados em máquinas físicas diferentes.
                         No geral, a maioria se preocupa em gerar um trafégo de rede local, o que limita a quantidade de testes que podem ser gerados com elas. As
-                        ferramentas que não possuiam essa limitação eram o MQTTLoader e o plugin para o JMQTER, MQTT-JMETER. Por fim, foi escolhido melhorar a
+                        ferramentas que não possuiam essa limitação eram o MQTTLoader e o plugin para o JMETER, MQTT-JMETER. Por fim, foi escolhido melhorar a
                         usabilidade do MQTTLoader, com o objetivo de atrair mais pessoas para a comunidade.
                     </Text>
                     <Text margin={1}>
