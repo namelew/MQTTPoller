@@ -30,7 +30,11 @@ const Experiments = ( { experiments } : Props) => {
                         <Td>{experiment.execTime} s</Td>
                         <Td>{experiment.finish ? 'Sim' : 'Não'}</Td>
                         <Td>{experiment.error !== '' ? 'Sim' : 'Não'}</Td>
-                        <Td>Mais</Td>
+                        <Td>
+                            <Button colorScheme="teal" size="sm" variant="outline" onClick={() => {/* Add your onClick handler here */}}>
+                                Detalhar
+                            </Button>
+                        </Td>
                         <Td>
                             <Button colorScheme="red" size="md" variant="solid" onClick={() => onDelete.mutate(experiment.id)}>
                                 Deletar

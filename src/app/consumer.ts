@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 import { IRequest, IResult } from 'interfaces/IExperiment';
 
 export const api = axios.create({
