@@ -1,7 +1,7 @@
 'use client'
 import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, HStack, FormControl } from "@chakra-ui/react";
 import { useEffect, useState } from 'react';
-import { mqttVersions, QoS } from "./static";
+import { mqttVersions, QoS } from "../static";
 import { IRequest } from 'interfaces/IExperiment';
 import TextArea from "./inputs/textarea";
 import Number from "./inputs/number";
