@@ -174,7 +174,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
     }
 
     return (
-        <Modal isOpen={openModal} onClose={onClose} size='3xl' footer={
+        <Modal title="Parâmetros do Experimento" isOpen={openModal} onClose={onClose} size='3xl' footer={
             <HStack justifyContent="space-between" width="100%">
                 <Button colorScheme="blue" mr={3} onClick={onClose}>
                     Fechar

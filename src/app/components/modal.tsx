@@ -1,5 +1,5 @@
 'use client'
-import { Modal as ChakraModal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, ResponsiveValue } from "@chakra-ui/react";
+import { Modal as ChakraModal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, ResponsiveValue, Text } from "@chakra-ui/react";
 
 interface Props {
     title?:string,
@@ -22,7 +22,9 @@ const Modal = ( {
         <ChakraModal isOpen={isOpen} onClose={onClose} size={size ? size : 'xl'}>
             <ModalOverlay />
             <ModalContent>
-                <ModalHeader>{title}</ModalHeader>
+                <ModalHeader>
+                    <Text textAlign="center">{title}</Text>
+                </ModalHeader>
                 <ModalCloseButton />
                 <ModalBody>
                     {children}        
