@@ -6,6 +6,8 @@ import { deleteExperiment } from "consumer";
 import { IExperiment } from "interfaces/IExperiment";
 import { useState } from "react";
 import { QoS, mqttVersions } from "static";
+import ResultContainer from "./results";
+import Carousel from "components/carossel";
 
 interface Props {
     experiments?:IExperiment[],
@@ -147,49 +149,12 @@ const Experiments = ( { experiments } : Props) => {
                                     </Container>
                                     <Container>
                                         <Text fontWeight="bold" textAlign="center">Resultados</Text>
-                                        {experiment.results.map((result, index) =>(
-                                            <Container key={experiment.workers[index]}>
-                                                <Text fontWeight="bold">Worker:</Text>
-                                                <Text>{experiment.workers[index]}</Text>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Publicação Vazão Média:</Text>
-                                                    <Text>{result.publish.avg_throughput.toString()}</Text>
-                                                </Flex>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Publicação Vazão Máxima:</Text>
-                                                    <Text>{result.publish.max_throughput.toString()}</Text>
-                                                </Flex>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Publicação Vazão (Por segundo):</Text>
-                                                    <Text>Não implementado</Text>
-                                                </Flex>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Mensagens Publicadas:</Text>
-                                                    <Text>{result.publish.publiqued_messages}</Text>
-                                                </Flex>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Assinatura Vazão Média:</Text>
-                                                    <Text>{result.subscribe.avg_throughput.toString()}</Text>
-                                                </Flex>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Assinatura Vazão Máxima:</Text>
-                                                    <Text>{result.subscribe.max_throughput.toString()}</Text>
-                                                </Flex>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Assinatura Latência Média:</Text>
-                                                    <Text>{result.subscribe.avg_latency.toString()}</Text>
-                                                </Flex>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Assinatura Latência Máxima:</Text>
-                                                    <Text>{result.subscribe.latency.toString()}</Text>
-                                                </Flex>
-                                                <Flex gap='1'>
-                                                    <Text fontWeight="bold">Mensagens Recebidas:</Text>
-                                                    <Text>{result.subscribe.received_messages}</Text>
-                                                </Flex>
-                                            </Container>
-                                            )
-                                        )}
+                                        {experiment.results === null || experiment.results.length === 0 ? 
+                                            'Sem resultados' :
+                                            <Carousel
+                                                items={experiment.results.map( (result, index) => <ResultContainer key={index} result={result} workerID={experiment.workers[index]}/>)}
+                                            />
+                                        }
                                     </Container>
                                 </HStack>
                             </Modal>
