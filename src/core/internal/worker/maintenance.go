@@ -302,44 +302,6 @@ func getToken() (string, bool) {
 	return token, makeRegister
 }
 
-func authentication(w *Worker, threshold int) {
-	confirmation := make(chan bool, 1)
-
-	token := w.client.Subscribe(w.Id+"/Login/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		confirmation <- true
-	})
-	token.Wait()
-
-	token = w.client.Publish("Orquestrator/Login", byte(1), false, w.Id)
-	token.Wait()
-
-	go func() {
-		<-time.After(w.loginTimeout)
-		confirmation <- false
-	}()
-
-	if !<-confirmation {
-		if threshold > 1 {
-			authentication(w, threshold-1)
-			return
-		}
-
-		if w.loginThreshold < 0 {
-			authentication(w, threshold)
-			return
-		}
-
-		mess, _ := json.Marshal(messages.Status{Type: "Client Status", Status: "offline auth fail", Attr: messages.Command{}})
-		token := w.client.Publish(w.Id+"/Status", byte(1), true, string(mess))
-		token.Wait()
-		w.client.Disconnect(0)
-		log.Register("Shutdown auth failure")
-		os.Exit(0)
-	}
-
-	log.Register("Auth sucess")
-}
-
 func createClient(w *Worker, opts *mqtt.ClientOptions) mqtt.Client {
 	log.Register("Configuring mqtt paho client")
 
@@ -357,25 +319,30 @@ func register(w *Worker, threshold int) {
 
 	confirmation := make(chan bool, 1)
 
-	token := w.client.Subscribe("Orquestrator/Register/Log", byte(1), func(c mqtt.Client, m mqtt.Message) {
-		response := strings.Split(string(m.Payload()), " ")
-
-		if response[0] != w.Id {
-			return
-		}
+	token := w.client.Subscribe("Orquestrator/Register/"+w.Id, byte(1), func(c mqtt.Client, m mqtt.Message) {
+		response := string(m.Payload())
 
 		var f *os.File
+		var err error
 
 		if !utils.FileExists("token.bin") {
-			f, _ = os.Create("token.bin")
+			f, err = os.Create("token.bin")
+
+			if err != nil {
+				log.Fatal("unable to create token file")
+			}
 		} else {
-			f, _ = os.Open("token.bin")
+			f, err = os.Open("token.bin")
+
+			if err != nil {
+				log.Fatal("unable to open token file")
+			}
 		}
 		f.Truncate(0)
-		f.Write([]byte(response[1]))
+		f.Write([]byte(response))
 
 		f.Close()
-		w.Id = response[1]
+		w.Id = response
 		confirmation <- true
 	})
 	token.Wait()
@@ -439,7 +406,9 @@ func connect(w *Worker) {
 	w.client = createClient(w, opts)
 
 	log.Register("Authentication worker")
-	authentication(w, w.loginThreshold)
+
+	token := w.client.Publish("Orquestrator/Login", byte(2), false, w.Id)
+	token.Wait()
 }
 
 func disconnect(worker *Worker) {
