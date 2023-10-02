@@ -83,7 +83,7 @@ func (o Orquestrator) Init() error {
 
 	data.Init(o.log)
 
-	o.client.Subscribe("Orquestrator/Register", 1, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Subscribe("Orquestrator/Register", 2, func(c mqtt.Client, m mqtt.Message) {
 		go func(messagePayload []byte) {
 			var clientID string = uuid.New().String()[:]
 			worker := string(messagePayload)
@@ -94,11 +94,11 @@ func (o Orquestrator) Init() error {
 
 			o.log.Register("worker " + worker + " registed as " + clientID)
 
-			o.client.Publish("Orquestrator/Register/Log", 1, false, worker+" "+clientID)
+			o.client.Publish("Orquestrator/Register/"+worker, 2, false, clientID)
 		}(m.Payload())
 	})
 
-	o.client.Subscribe("Orquestrator/Login", 1, func(c mqtt.Client, m mqtt.Message) {
+	o.client.Subscribe("Orquestrator/Login", 2, func(c mqtt.Client, m mqtt.Message) {
 		go func(messagePayload []byte) {
 			token := string(messagePayload)
 
@@ -116,8 +116,6 @@ func (o Orquestrator) Init() error {
 			o.log.Register("worker " + token + " loged")
 
 			o.setMessageHandler(&token)
-
-			(o.client.Publish(token+"/Login/Log", 1, false, "true")).Wait()
 
 			go o.timeout(&tout.Timeout{
 				OID:       token,
