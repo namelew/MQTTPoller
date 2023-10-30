@@ -37,6 +37,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
+ENV ORQUESTRATOR_ADRESS http://orquestrator:8000/
 # Uncomment the following line in case you want to disable telemetry during runtime.
 # ENV NEXT_TELEMETRY_DISABLED 1
 
@@ -61,5 +62,6 @@ EXPOSE 3000
 ENV PORT 3000
 # set hostname to localhost
 ENV HOSTNAME "0.0.0.0"
+RUN export ORQUESTRATOR_ADRESS=${ORQUESTRATOR_ADRESS}
 
 CMD ["node", "server.js"]
