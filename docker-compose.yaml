@@ -28,6 +28,16 @@ services:
       - BROKER=tcp://mosquitto_broker:1883
     depends_on:
       - broker
+  web:
+    build:
+      context: ./
+      dockerfile: ./images/web/Dockerfile
+    ports:
+      - 3001:3000
+    networks:
+     - example_experiment_network
+    depends_on:
+      - orquestrator
   workers:
     build:
       context: ./
