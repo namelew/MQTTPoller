@@ -55,11 +55,11 @@ const ResultContainer = ( { workerID, result } : Props) => {
                 </Flex>
                 <Flex gap='1'>
                     <Text fontWeight="bold">Assinatura Latência Média:</Text>
-                    <Text>{result.subscribe.avg_latency.toString()}</Text>
+                    <Text>{result.subscribe.avg_latency.toString()} ms</Text>
                 </Flex>
                 <Flex gap='1'>
                     <Text fontWeight="bold">Assinatura Latência Máxima:</Text>
-                    <Text>{result.subscribe.latency.toString()}</Text>
+                    <Text>{result.subscribe.latency.toString()} ms</Text>
                 </Flex>
                 <Flex gap='1'>
                     <Text fontWeight="bold">Mensagens Recebidas:</Text>

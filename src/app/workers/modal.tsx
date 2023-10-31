@@ -47,7 +47,6 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                 execTime: 0,
                 logLevel: "INFO",
                 ntp: "",
-                output: false,
                 username: "",
                 password: "",
                 tlsTruststore: "",
@@ -108,13 +107,6 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                         description: { ...prevValues.description, retain: !prevValues.description.retain }
                     } : prevValues));
                 break;
-            case "output":
-                setFormValues((prevValues) => ( prevValues ?
-                    {
-                        ...prevValues,
-                        description: { ...prevValues.description, output: !prevValues.description.output }
-                    } : prevValues));
-                break;
         }
     };
 
@@ -161,7 +153,6 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                 execTime: 0,
                 logLevel: "INFO",
                 ntp: "",
-                output: false,
                 username: "",
                 password: "",
                 tlsTruststore: "",
@@ -315,12 +306,6 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                         label="Retenção?"
                         name="retain"
                         isChecked={formValues?.description.retain}
-                        onChange={handleChangeBool}
-                    />
-                    <Checkbox
-                        label="Gerar arquivo de log?"
-                        name="output"
-                        isChecked={formValues?.description.output}
                         onChange={handleChangeBool}
                     />
                 </FormControl>

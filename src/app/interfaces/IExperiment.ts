@@ -22,7 +22,6 @@ export interface IRequest {
         execTime:  number,
         logLevel:  string,
         ntp:  string,
-        output:  boolean,
         username:  string,
         password:  string,
         tlsTruststore:  string,
