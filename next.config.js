@@ -1,14 +1,17 @@
-/** @type {import('next').NextConfig} */
+/**
+ * @type {import('next').NextConfig}
+*/
+
 const nextConfig = {
-    output: 'standalone',
-    async rewrites() {
-        return [
-          {
-            source: '/api/:path*',
-            destination: 'http://localhost:8000/orquestrator/:path*', // Proxy to Backend
-          },
-        ]
-    },
+  "output": "standalone",
+  "rewrites": async () => {
+    return [
+      {
+        "source": "/api/:path*",
+        "destination": `${process.env.ORQUESTRATOR_ADRESS ? process.env.ORQUESTRATOR_ADRESS : 'http://localhost:8000'}/orquestrator/:path*`,
+      },
+    ];
+  }
 }
 
 module.exports = nextConfig
