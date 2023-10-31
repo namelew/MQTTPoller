@@ -22,7 +22,6 @@ func (w *Worker) Ping() {
 func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimentId int64) {
 	var arg_file string = `"myconfig.conf"`
 	var flag string = "-c"
-	var createLogFile bool = false
 	var id int64
 
 	if !utils.FileExists("myconfig.conf") {
@@ -49,7 +48,7 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 	}
 
 	if cmdExp.Arguments != nil {
-		createLogFile, id = loadArguments("myconfig.conf", cmdExp.Arguments)
+		id = loadArguments("myconfig.conf", cmdExp.Arguments)
 	} else {
 		arg_file = ""
 		flag = ""
@@ -108,7 +107,7 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 		os.Exit(3)
 	}
 
-	resultsExperiment := extracExperimentResults(output.String(), stderr.String(), createLogFile)
+	resultsExperiment := extracExperimentResults(output.String(), stderr.String())
 
 	if resultsExperiment.Meta.ExperimentError != "" {
 		mess, _ = json.Marshal(messages.Status{Type: fmt.Sprintf("Experiment Status %d", id), Status: resultsExperiment.Meta.ExperimentError, Attr: messages.Command{}})

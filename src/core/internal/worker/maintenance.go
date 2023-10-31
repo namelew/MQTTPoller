@@ -37,7 +37,7 @@ func Build() *Worker {
 	return &Worker{}
 }
 
-func loadArguments(file string, arg map[string]interface{}) (bool, int64) {
+func loadArguments(file string, arg map[string]interface{}) int64 {
 	var arguments messages.CommandExperiment
 	jsonObj, _ := json.Marshal(arg)
 	json.Unmarshal(jsonObj, &arguments)
@@ -80,9 +80,7 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64) {
 	argf += fmt.Sprintf("%slog_level=%s\n", isNull(arguments.Declaration.LogLevel), arguments.Declaration.LogLevel)
 	argf += fmt.Sprintf("%sexec_time=%d\n", isNull(arguments.Declaration.ExecTime), arguments.Declaration.ExecTime)
 	argf += fmt.Sprintf("%sntp=%s\n", isNull(arguments.Declaration.Ntp), arguments.Declaration.Ntp)
-	if arguments.Declaration.Output {
-		argf += fmt.Sprintf("output=%s\n", "output")
-	}
+	argf += "output=output\n"
 	argf += fmt.Sprintf("%suser_name=%s\n", isNull(arguments.Declaration.User), arguments.Declaration.User)
 	argf += fmt.Sprintf("%spassword=%s\n", isNull(arguments.Declaration.Password), arguments.Declaration.Password)
 	argf += fmt.Sprintf("%stls_truststore=%s\n", isNull(arguments.Declaration.TlsTrustsore), arguments.Declaration.TlsTrustsore)
@@ -98,7 +96,7 @@ func loadArguments(file string, arg map[string]interface{}) (bool, int64) {
 		f.Close()
 	}
 
-	return arguments.Declaration.Output, arguments.Expid
+	return arguments.Expid
 }
 
 func sanitizeStrings(s string) string {
@@ -111,7 +109,7 @@ func sanitizeStrings(s string) string {
 	return s
 }
 
-func extracExperimentResults(output string, logs string, createLog bool) messages.ExperimentResult {
+func extracExperimentResults(output string, logs string) messages.ExperimentResult {
 	results := messages.ExperimentResult{}
 	results.Meta.Literal = logs + output
 	results.Meta.ToolName = "mqttLoader"
@@ -239,44 +237,42 @@ func extracExperimentResults(output string, logs string, createLog bool) message
 		return results
 	}
 
-	if createLog {
-		var files []string
+	var files []string
 
-		err := filepath.Walk("output", func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				log.Register("Extract failure " + err.Error())
-				return nil
-			}
-
-			if !info.IsDir() {
-				files = append(files, path)
-			}
-
-			return nil
-		})
-
+	err = filepath.Walk("output", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			results.Meta.ExperimentError = "Error X: Failed in upload log file"
+			log.Register("Extract failure " + err.Error())
+			return nil
 		}
 
-		for _, f := range files {
-			aux := strings.Split(f, "/")
-			name := aux[len(aux)-1]
-			if name[0:10] == "mqttloader" {
-				buffer, err := os.ReadFile(f)
+		if !info.IsDir() {
+			files = append(files, path)
+		}
 
-				if err != nil {
-					errorMessage := "Unable to read data from output file. " + err.Error()
-					log.Register("Experiment Error: " + errorMessage)
-					results.Meta.ExperimentError = errorMessage
-					return results
-				}
+		return nil
+	})
 
-				results.Meta.LogFile.Data = buffer
-				results.Meta.LogFile.Name = name
-				results.Meta.LogFile.Extension = strings.Split(name, ".")[1]
-				os.Remove(f)
+	if err != nil {
+		results.Meta.ExperimentError = "Error X: Failed in upload log file"
+	}
+
+	for _, f := range files {
+		aux := strings.Split(f, "/")
+		name := aux[len(aux)-1]
+		if name[:10] == "mqttloader" {
+			buffer, err := os.ReadFile(f)
+
+			if err != nil {
+				errorMessage := "Unable to read data from output file. " + err.Error()
+				log.Register("Experiment Error: " + errorMessage)
+				results.Meta.ExperimentError = errorMessage
+				return results
 			}
+
+			results.Meta.LogFile.Data = buffer
+			results.Meta.LogFile.Name = name
+			results.Meta.LogFile.Extension = strings.Split(name, ".")[1]
+			os.Remove(f)
 		}
 	}
 

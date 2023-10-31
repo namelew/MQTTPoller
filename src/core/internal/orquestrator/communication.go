@@ -279,7 +279,6 @@ func (o *Orquestrator) StartExperiment(arg messages.Start) models.Experiment {
 		ExecTime:              arg.Description.ExecTime,
 		LogLevel:              arg.Description.LogLevel,
 		Ntp:                   arg.Description.Ntp,
-		Output:                arg.Description.Output,
 		User:                  arg.Description.User,
 		Password:              arg.Description.Password,
 		TlsTrustsore:          arg.Description.TlsTrustsore,

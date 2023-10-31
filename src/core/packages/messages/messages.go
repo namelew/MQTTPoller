@@ -42,7 +42,6 @@ type Experiment struct {
 	ExecTime              int    `json:"execTime"`
 	LogLevel              string `json:"logLevel"`
 	Ntp                   string `json:"ntp"`
-	Output                bool   `json:"output"`
 	User                  string `json:"username"`
 	Password              string `json:"password"`
 	TlsTrustsore          string `json:"tlsTruststore"`
