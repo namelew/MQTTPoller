@@ -15,9 +15,6 @@ const ResultContainer = ( { workerID, result } : Props) => {
     };
 
     const onLogFileDownload = () => {
-        if (result.meta.log_file.name === '') {
-            return
-        }
         const blob = new Blob([result.meta.log_file.data], {type: 'text/csv'});
         saveAs(blob, `${result.meta.log_file.name}-${workerID}.${result.meta.log_file.extension}`);
     };

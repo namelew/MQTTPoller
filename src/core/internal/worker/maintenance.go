@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -260,13 +261,30 @@ func extracExperimentResults(output string, logs string) messages.ExperimentResu
 		aux := strings.Split(f, "/")
 		name := aux[len(aux)-1]
 		if name[:10] == "mqttloader" {
-			buffer, err := os.ReadFile(f)
+			file, err := os.Open(f)
 
 			if err != nil {
 				errorMessage := "Unable to read data from output file. " + err.Error()
 				log.Register("Experiment Error: " + errorMessage)
 				results.Meta.ExperimentError = errorMessage
 				return results
+			}
+			defer file.Close()
+
+			reader := csv.NewReader(file)
+
+			records, err := reader.ReadAll()
+			if err != nil {
+				errorMessage := "Unable to log records from output file. " + err.Error()
+				log.Register("Experiment Error: " + errorMessage)
+				results.Meta.ExperimentError = errorMessage
+				return results
+			}
+
+			buffer := ""
+
+			for i := range records {
+				buffer += strings.Join(records[i], ",") + "\n"
 			}
 
 			results.Meta.LogFile.Data = buffer

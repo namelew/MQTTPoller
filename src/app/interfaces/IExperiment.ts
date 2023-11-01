@@ -39,7 +39,7 @@ export interface IResult {
         literal: string,
         log_file: {
             name: string,
-            data: File,
+            data: string,
             extension: string
         },
     },
