@@ -18,44 +18,43 @@ interface Props {
 }
 
 const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
+    const defaultParams = {
+        description: {
+            tool: "mqtt-loader",
+            broker: "localhost",
+            port:  1883,
+            mqttVersion:  3,
+            numPublishers:  0,
+            numSubscribers:  0,
+            qosPublisher:  0,
+            qosSubscriber:  0,
+            sharedSubscription:  false,
+            retain:  false,
+            topic:  "mqtt-test-topic",
+            payload:  0,
+            numMessages:  0,
+            ramUp:  0,
+            rampDown:  0,
+            interval:  0,
+            subscriberTimeout: 0,
+            execTime: 5,
+            logLevel: "INFO",
+            ntp: "a.st1.ntp.br",
+            username: "",
+            password: "",
+            tlsTruststore: "",
+            tlsTruststorePass: "",
+            tlsKeystore: "",
+            tlsKeystorePass: ""
+        }
+    }
+
     const submitMutation = useMutation(startExperiment, {
         onSuccess: (result) => console.log(result),
         onError: (error) => console.log(error)
     });
 
-    const [formValues, setFormValues] = useState<IRequest>(
-        {
-            attempts: 0,
-            description: {
-                tool: "mqtt-loader",
-                broker: "",
-                port:  1883,
-                mqttVersion:  3,
-                numPublishers:  0,
-                numSubscribers:  0,
-                qosPublisher:  0,
-                qosSubscriber:  0,
-                sharedSubscription:  false,
-                retain:  false,
-                topic:  "",
-                payload:  0,
-                numMessages:  0,
-                ramUp:  0,
-                rampDown:  0,
-                interval:  0,
-                subscriberTimeout: 0,
-                execTime: 0,
-                logLevel: "INFO",
-                ntp: "",
-                username: "",
-                password: "",
-                tlsTruststore: "",
-                tlsTruststorePass: "",
-                tlsKeystore: "",
-                tlsKeystorePass: ""
-            }
-        }
-    );
+    const [formValues, setFormValues] = useState<IRequest>(defaultParams);
 
     useEffect(() => {
         if (selected) {
@@ -132,34 +131,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
         setFormValues({
             id: selected,
             attempts: 0,
-            description: {
-                tool: "mqtt-loader",
-                broker: "",
-                port:  0,
-                mqttVersion:  3,
-                numPublishers:  0,
-                numSubscribers:  0,
-                qosPublisher:  0,
-                qosSubscriber:  0,
-                sharedSubscription:  false,
-                retain:  false,
-                topic:  "",
-                payload:  0,
-                numMessages:  0,
-                ramUp:  0,
-                rampDown:  0,
-                interval:  0,
-                subscriberTimeout: 0,
-                execTime: 0,
-                logLevel: "INFO",
-                ntp: "",
-                username: "",
-                password: "",
-                tlsTruststore: "",
-                tlsTruststorePass: "",
-                tlsKeystore: "",
-                tlsKeystorePass: ""
-            }
+            description: defaultParams.description,
         });
         onClose();
     }
