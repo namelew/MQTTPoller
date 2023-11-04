@@ -2,9 +2,13 @@ FROM golang:1.21.0-alpine as base
 
 WORKDIR /app
 COPY . .
-COPY mqttloader/build/distributions/mqttloader /app/tools/mqttloader
 
+RUN apk update; apk add --no-cache curl unzip
 RUN go build -o bin/worker src/core/cmd/worker/main.go
+RUN mkdir tools && \
+    curl -OL https://github.com/dist-sys/mqttloader/releases/download/v0.8.6/mqttloader-0.8.6.zip && \
+    unzip ./mqttloader-0.8.6.zip -d /app/tools && \
+    rm mqttloader-0.8.6.zip
 
 FROM alpine:3.17 as binary
 

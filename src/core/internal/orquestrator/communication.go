@@ -164,7 +164,7 @@ func (o *Orquestrator) setMessageHandler(t *string) {
 			err := json.Unmarshal(payload, &output)
 
 			if err != nil {
-				log.Println(err.Error())
+				log.Println("Unable to umarshal worker response. ", err.Error())
 				return
 			}
 
