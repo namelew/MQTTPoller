@@ -35,10 +35,6 @@ const ResultContainer = ( { workerID, result } : Props) => {
                     <Text>{result.publish.max_throughput.toString()}</Text>
                 </Flex>
                 <Flex gap='1'>
-                    <Text fontWeight="bold">Publicação Vazão (Por segundo):</Text>
-                    <Text>Não implementado</Text>
-                </Flex>
-                <Flex gap='1'>
                     <Text fontWeight="bold">Mensagens Publicadas:</Text>
                     <Text>{result.publish.publiqued_messages}</Text>
                 </Flex>
