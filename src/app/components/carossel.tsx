@@ -22,10 +22,12 @@ const Carousel = ({ items } : Props) => {
       <Center border="1px" borderColor="gray.200" borderRadius="lg" boxShadow="lg">
         {items.length > 0 ? items[displayIndex] : 'Sem items'}
       </Center>
-      <Box>
-        <Button onClick={handlePrev} mr="4">Anterior</Button>
-        <Button onClick={handleNext}>Próximo</Button>
-      </Box>
+      {items.length > 1 &&
+        <Box>
+          <Button onClick={handlePrev} mr="4">Anterior</Button>
+          <Button onClick={handleNext}>Próximo</Button>
+        </Box>
+      }
     </VStack>
   );
 };
