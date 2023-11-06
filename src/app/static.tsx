@@ -28,3 +28,26 @@ export const QoS = [
         value: 2
     }
 ]
+
+export const logLevels = [
+    {
+        key: "info",
+        name: "Informações",
+        value: "INFO"  
+    },
+    {
+        key: "all",
+        name: "Tudo",
+        value: "ALL"  
+    },
+    {
+        key: "warn",
+        name: "Avisos",
+        value: "WARNING"  
+    },
+    {
+        key: "severe",
+        name: "Apenas Erros",
+        value: "SEVERE"  
+    }
+]

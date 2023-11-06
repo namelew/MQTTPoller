@@ -1,7 +1,7 @@
 'use client'
 import { Button, HStack, FormControl } from "@chakra-ui/react";
 import { useEffect, useState } from 'react';
-import { mqttVersions, QoS } from "../static";
+import { logLevels, mqttVersions, QoS } from "../static";
 import { IRequest } from 'interfaces/IExperiment';
 import TextArea from "./inputs/textarea";
 import Number from "./inputs/number";
@@ -78,6 +78,15 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
             } : prevValues));
     }
 
+    const handlerSelectStringChange = (event: React.FormEvent<HTMLSelectElement>) => {
+        const { name, value } = event.currentTarget;
+        setFormValues((prevValues) => ( prevValues ?
+            {
+                ...prevValues,
+                description: { ...prevValues.description, [name]: value }
+            } : prevValues));
+    }
+
     const handleChangeNumber = (event:React.FormEvent<HTMLInputElement>) => {
         const { name, value } = event.currentTarget;
 
@@ -137,7 +146,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
     }
 
     return (
-        <Modal title="Parâmetros do Experimento" isOpen={openModal} onClose={onClose} size='3xl' footer={
+        <Modal title="Parâmetros do Experimento" isOpen={openModal} onClose={onClose} size='5xl' footer={
             <HStack justifyContent="space-between" width="100%">
                 <Button colorScheme="blue" mr={3} onClick={onClose}>
                     Fechar
@@ -169,6 +178,13 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                             onChange={handlerSelectChange}
                             options={mqttVersions}
                         />
+                        <DropDown
+                            label="Nível de Log"
+                            name="logLevel"
+                            value={formValues?.description.logLevel}
+                            onChange={handlerSelectStringChange}
+                            options={logLevels}
+                        />
                     </HStack>
                     <HStack justifyContent="space-between" width="100%">
                         <TextArea
@@ -189,6 +205,7 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                             value={formValues?.description.password}
                             onChange={handleChangeString}
                         />
+                        <TextArea label="Tópico" name="topic" value={formValues?.description.topic} onChange={handleChangeString}/>
                     </HStack>
                     <HStack justifyContent="space-between" width="100%">
                         <Number
@@ -211,11 +228,16 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                         />
                     </HStack>
                     <HStack justifyContent="space-between" width="100%">
-                        <TextArea label="Tópico" name="topic" value={formValues?.description.topic} onChange={handleChangeString}/>
                         <Number
                             label="N. Publicadores"
                             name="numPublishers"
                             value={formValues?.description.numPublishers}
+                            onChange={handleChangeNumber}
+                        />
+                        <Number
+                            label="N. Assinantes"
+                            name="numSubscribers"
+                            value={formValues?.description.numSubscribers}
                             onChange={handleChangeNumber}
                         />
                         <DropDown
@@ -224,20 +246,6 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                             value={formValues?.description.qosPublisher}
                             onChange={handlerSelectChange}
                             options={QoS}
-                        />
-                    </HStack>
-                    <HStack justifyContent="space-between" width="100%">
-                        <Number
-                            label="Timeout Assinatura"
-                            name="subscriberTimeout"
-                            value={formValues?.description.subscriberTimeout}
-                            onChange={handleChangeNumber}
-                        />
-                        <Number
-                            label="N. Assinantes"
-                            name="numSubscribers"
-                            value={formValues?.description.numSubscribers}
-                            onChange={handleChangeNumber}
                         />
                         <DropDown
                             label="QoS Assinaturas"
@@ -264,6 +272,12 @@ const ExperimentModal = ({ openModal, onClose, selected }: Props) => {
                             label='Tempo de Finalização'
                             name="rampDown"
                             value={formValues?.description.rampDown}
+                            onChange={handleChangeNumber}
+                        />
+                        <Number
+                            label="Timeout Assinatura"
+                            name="subscriberTimeout"
+                            value={formValues?.description.subscriberTimeout}
                             onChange={handleChangeNumber}
                         />
                     </HStack>

@@ -5,7 +5,7 @@ import Modal from "components/modal";
 import { deleteExperiment } from "consumer";
 import { IExperiment } from "interfaces/IExperiment";
 import { useState } from "react";
-import { QoS, mqttVersions } from "static";
+import { QoS, logLevels, mqttVersions } from "static";
 import ResultContainer from "./results";
 import Carousel from "components/carossel";
 
@@ -27,6 +27,9 @@ const Experiments = ( { experiments } : Props) => {
             {experiments?.map((experiment) => {
                 const mqttVersion = mqttVersions.find((version) => version.value === experiment.mqttVersion);
                 const mqttVersionName = mqttVersion ? mqttVersion.name : 'Unknown version';
+
+                const logLevel = logLevels.find((level) => level.value === experiment.logLevel);
+                const logLevelName = logLevel ? logLevel.name : 'Unknown log level';
 
                 const qosPub = QoS.find((quality) => quality.value === experiment.qosPublisher);
                 const qosPubName = qosPub ? qosPub.name : 'Unknown QoS';
@@ -75,6 +78,10 @@ const Experiments = ( { experiments } : Props) => {
                                         <Flex gap='1'>
                                             <Text fontWeight="bold">Tópico:</Text>
                                             <Text>{experiment.topic}</Text>
+                                        </Flex>
+                                        <Flex gap='1'>
+                                            <Text fontWeight="bold">Nível de Log:</Text>
+                                            <Text>{logLevelName}</Text>
                                         </Flex>
                                         <Flex gap='1'>
                                             <Text fontWeight="bold">Usuário:</Text>

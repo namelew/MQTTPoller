@@ -3,13 +3,13 @@ import { Select, FormLabel, Box} from "@chakra-ui/react";
 interface Option {
     key: string,
     name?: string,
-    value?: number,
+    value?: number | string,
 }
 
 interface Props {
     label?: string
     name?: string,
-    value?: number,
+    value?: number | string,
     options?: Option[],
     onChange?: (event:React.FormEvent<any>) => void
 }
