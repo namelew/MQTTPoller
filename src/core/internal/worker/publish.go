@@ -83,6 +83,37 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 	experimentList.Add(&experimentNode)
 	experimentListMutex.Unlock()
 
+	declaration, ok := cmdExp.Arguments["declaration"].(map[string]interface{})
+
+	if !ok {
+		log.Register("Unabel to read experiment declaration from orquestrator")
+	}
+
+	execTime, ok := declaration["execTime"].(float64)
+
+	if !ok {
+		log.Register("Unabel to read experiment execution time from orquestrator")
+	}
+
+	if execTime == 0 {
+		execTime = 1
+	}
+
+	go func (expid int64, timeout time.Duration)  {
+		<-time.After(timeout)
+		experimentListMutex.Lock()
+
+		node := experimentList.Search(expid)
+
+		if node != nil && !node.Finished {
+			log.Register(fmt.Sprintf("Experiment %d excced the execution timeout", expid))
+			node.Finished = true
+			node.Proc.Kill()
+		}
+
+		experimentListMutex.Unlock()
+	}(id, time.Second * time.Duration(execTime) * 3)
+
 	cmd.Wait()
 
 	experimentListMutex.Lock()
