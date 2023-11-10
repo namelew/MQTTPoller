@@ -99,7 +99,7 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 		execTime = 1
 	}
 
-	go func (expid int64, timeout time.Duration)  {
+	go func(expid int64, timeout time.Duration) {
 		<-time.After(timeout)
 		experimentListMutex.Lock()
 
@@ -112,7 +112,7 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 		}
 
 		experimentListMutex.Unlock()
-	}(id, time.Second * time.Duration(execTime) * 3)
+	}(id, time.Second*time.Duration(execTime)*3)
 
 	cmd.Wait()
 
@@ -156,10 +156,18 @@ func (w *Worker) Start(cmdExp messages.Command, commandLiteral string, experimen
 
 	resultsExperiment.Meta.ID = uint64(id)
 
-	results, _ := json.Marshal(resultsExperiment)
+	results, err := json.Marshal(resultsExperiment)
+
+	if err != nil {
+		log.Register("Unable to marshall experiment result from " + strconv.FormatInt(id, 10) + "." + err.Error())
+	}
 
 	t = w.client.Publish(w.Id+"/Experiments/Results", byte(1), false, string(results))
 	t.Wait()
+
+	if t.Error() != nil {
+		log.Register("Unable to send experiment result from " + strconv.FormatInt(id, 10) + "." + t.Error().Error())
+	}
 
 	os.Remove("CommandsLog/experiment_" + fmt.Sprint(id) + ".json")
 }
