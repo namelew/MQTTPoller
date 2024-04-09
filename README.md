@@ -1,5 +1,7 @@
 # MQTTPoller
  A MQTT Network Benckmark Tool based on MQTT Loader focus on distributed experiments
+## Architecture
+![]()
 ## Build
 * The orquestrator and the worker code must be compile before use to the target OS
 ```
@@ -56,3 +58,5 @@ BROKER=tcp://localhost:1883 # Control broker
 ```
 ORQUESTRATOR_ADRESS http://orquestrator:8000/ # Control API Address
 ```
+## Compatible Tools
+* [MQTTLoader](https://github.com/dist-sys/mqttloader)
